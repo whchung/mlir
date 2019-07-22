@@ -53,7 +53,7 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     MLIRGPU
     # ROCM TODO
     #MLIRGPUtoCUDATransforms
-    #MLIRGPUtoNVVMTransforms
+    MLIRGPUtoROCDLTransforms
     MLIRLLVMIR
     MLIRStandardOps
     MLIRStandardToLLVM

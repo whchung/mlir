@@ -24,7 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 
 //#include "mlir/Conversion/GPUToCUDA/GPUToCUDAPass.h"
-//#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
+#include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/GPU/GPUDialect.h"
@@ -138,8 +138,8 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
     populateStdToLLVMConversionPatterns(converter, patterns);
     patterns.push_back(llvm::make_unique<GPULaunchFuncOpLowering>(converter));
   }));
+  pm.addPass(createLowerGpuOpsToROCDLOpsPass());
   // ROCM TODO
-  //pm.addPass(createLowerGpuOpsToNVVMOpsPass());
   //pm.addPass(createConvertGPUKernelToCubinPass(&compilePtxToCubin));
   //pm.addPass(createGenerateCubinAccessorPass());
   //pm.addPass(createConvertGpuLaunchFuncToCudaCallsPass());
