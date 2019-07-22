@@ -44,6 +44,21 @@ static llvm::Value *createIntrinsicCall(llvm::IRBuilder<> &builder,
   return builder.CreateCall(fn);
 }
 
+// ROCM TODO: review interface
+static llvm::Value *createDeviceFunctionCall(llvm::IRBuilder<> &builder,
+                                             StringRef fn_name, int parameter) {
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::FunctionType *fn_type = llvm::FunctionType::get(
+      llvm::Type::getInt32Ty(module->getContext()), // return type.
+      llvm::Type::getInt32Ty(module->getContext()), // parameter type.
+      false);                                       // no variadic arguments.
+  llvm::Function *fn = llvm::dyn_cast<llvm::Function>(
+      module->getOrInsertFunction(fn_name, fn_type).getCallee());
+  llvm::ArrayRef<llvm::Value *> operands(llvm::ConstantInt::get(
+      llvm::Type::getInt32Ty(module->getContext()), parameter));
+  return builder.CreateCall(fn, operands);
+}
+
 class ModuleTranslation : public LLVM::ModuleTranslation {
 
 public:

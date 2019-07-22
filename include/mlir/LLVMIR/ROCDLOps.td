@@ -51,12 +51,20 @@ def ROCDL_BlockIdXOp : ROCDL_SpecialRegisterOp<"workgroup.id.x">;
 def ROCDL_BlockIdYOp : ROCDL_SpecialRegisterOp<"workgroup.id.y">;
 def ROCDL_BlockIdZOp : ROCDL_SpecialRegisterOp<"workgroup.id.z">;
 
-// ROCM TODO: add ROCDL_DeviceFunctionOp class
-//def ROCDL_BlockDimXOp : ROCDL_DeviceFunctionOp<"__ockl_get_local_size.x">;
-//def ROCDL_BlockDimYOp : ROCDL_DeviceFunctionOp<"__ockl_get_local_size.y">;
-//def ROCDL_BlockDimZOp : ROCDL_DeviceFunctionOp<"__ockl_get_local_size.z">;
-//def ROCDL_GridDimXOp : ROCDL_DeviceFunctionOp<"__ockl_get_global_size.x">;
-//def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"__ockl_get_global_size.y">;
-//def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"__ockl_get_global_size.z">;
+class ROCDL_DeviceFunctionOp<string mnemonic, string device_function, int parameter,
+    list<OpTrait> traits = []> :
+  ROCDL_Op<mnemonic, !listconcat(traits, [NoSideEffect])>,
+  Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
+  string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""# device_function # "\", " # parameter # ");";
+  let parser = [{ return parseROCDLSpecialRegisterOp(parser, result); }];
+  let printer = [{ printROCDLSpecialRegisterOp(p, this->getOperation()); }];
+}
+
+def ROCDL_BlockDimXOp : ROCDL_DeviceFunctionOp<"workgroup.dim.x", "__ockl_get_local_size", 0>;
+def ROCDL_BlockDimYOp : ROCDL_DeviceFunctionOp<"workgroup.dim.y", "__ockl_get_local_size", 1>;
+def ROCDL_BlockDimZOp : ROCDL_DeviceFunctionOp<"workgroup.dim.z", "__ockl_get_local_size", 2>;
+def ROCDL_GridDimXOp : ROCDL_DeviceFunctionOp<"grid.dim.x", "__ockl_get_global_size", 0>;
+def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"grid.dim.y", "__ockl_get_global_size", 1>;
+def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z", "__ockl_get_global_size", 2>;
 
 #endif // ROCDLIR_OPS

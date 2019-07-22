@@ -13,18 +13,18 @@ func @rocdl_special_regs() -> !llvm.i32 {
   %5 = rocdl.workgroup.id.y : !llvm.i32
   // CHECK: %6 = call i32 @llvm.amdgcn.workgroup.id.z()
   %6 = rocdl.workgroup.id.z : !llvm.i32
-  // XXXCHECK: %7 = call i32 @__ockl_get_local_size(i32 0)
-  //%7 = __ockl_get_local_size.x : !llvm.i32
-  // XXXCHECK: %8 = call i32 @__ockl_get_local_size(i32 1)
-  //%8 = __ockl_get_local_size.y : !llvm.i32
-  // XXXCHECK: %9 = call i32 @__ockl_get_local_size(i32 2)
-  //%9 = __ockl_get_local_size.z : !llvm.i32
-  // XXXCHECK: %10 = call i32 @__ockl_get_global_size(i32 0)
-  //%10 = __ockl_get_global_size.x : !llvm.i32
-  // XXXCHECK: %11 = call i32 @__ockl_get_global_size(i32 1)
-  //%11 = __ockl_get_global_size.y : !llvm.i32
-  // XXXCHECK: %12 = call i32 @__ockl_get_global_size(i32 2)
-  //%12 = __ockl_get_global_size.z : !llvm.i32
+  // CHECK: %7 = call i32 @__ockl_get_local_size(i32 0)
+  %7 = rocdl.workgroup.dim.x : !llvm.i32
+  // CHECK: %8 = call i32 @__ockl_get_local_size(i32 1)
+  %8 = rocdl.workgroup.dim.y : !llvm.i32
+  // CHECK: %9 = call i32 @__ockl_get_local_size(i32 2)
+  %9 = rocdl.workgroup.dim.z : !llvm.i32
+  // CHECK: %10 = call i32 @__ockl_get_global_size(i32 0)
+  %10 = rocdl.grid.dim.x : !llvm.i32
+  // CHECK: %11 = call i32 @__ockl_get_global_size(i32 1)
+  %11 = rocdl.grid.dim.y : !llvm.i32
+  // CHECK: %12 = call i32 @__ockl_get_global_size(i32 2)
+  %12 = rocdl.grid.dim.z : !llvm.i32
   llvm.return %1 : !llvm.i32
 }
 

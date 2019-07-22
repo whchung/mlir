@@ -11,24 +11,24 @@ func @gpu_index_ops()
   %tIdZ = "gpu.thread_id"() {dimension = "z"} : () -> (index)
 
   // CHECK: = rocdl.workgroup.id.x : !llvm.i32
-  %bDimX = "gpu.block_dim"() {dimension = "x"} : () -> (index)
-  // CHECK: = rocdl.workgroup.id.y : !llvm.i32
-  %bDimY = "gpu.block_dim"() {dimension = "y"} : () -> (index)
-  // CHECK: = rocdl.workgroup.id.z : !llvm.i32
-  %bDimZ = "gpu.block_dim"() {dimension = "z"} : () -> (index)
-
-  // XXXCHECK: = rocdl.workgroup.dim.x : !llvm.i32
   %bIdX = "gpu.block_id"() {dimension = "x"} : () -> (index)
-  // XXXCHECK: = rocdl.workgroup.dim.y : !llvm.i32
+  // CHECK: = rocdl.workgroup.id.y : !llvm.i32
   %bIdY = "gpu.block_id"() {dimension = "y"} : () -> (index)
-  // XXXCHECK: = rocdl.workgroup.dim.z : !llvm.i32
+  // CHECK: = rocdl.workgroup.id.z : !llvm.i32
   %bIdZ = "gpu.block_id"() {dimension = "z"} : () -> (index)
 
-  // XXXCHECK: = rocdl.grid.dim.x : !llvm.i32
+  // CHECK: = rocdl.workgroup.dim.x : !llvm.i32
+  %bDimX = "gpu.block_dim"() {dimension = "x"} : () -> (index)
+  // CHECK: = rocdl.workgroup.dim.y : !llvm.i32
+  %bDimY = "gpu.block_dim"() {dimension = "y"} : () -> (index)
+  // CHECK: = rocdl.workgroup.dim.z : !llvm.i32
+  %bDimZ = "gpu.block_dim"() {dimension = "z"} : () -> (index)
+
+  // CHECK: = rocdl.grid.dim.x : !llvm.i32
   %gDimX = "gpu.grid_dim"() {dimension = "x"} : () -> (index)
-  // XXXCHECK: = rocdl.grid.dim.y : !llvm.i32
+  // CHECK: = rocdl.grid.dim.y : !llvm.i32
   %gDimY = "gpu.grid_dim"() {dimension = "y"} : () -> (index)
-  // XXXCHECK: = rocdl.grid.dim.z : !llvm.i32
+  // CHECK: = rocdl.grid.dim.z : !llvm.i32
   %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
 
   std.return

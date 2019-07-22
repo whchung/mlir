@@ -111,21 +111,20 @@ public:
         return;
       }
 
-      // ROCM TODO
-      //// BlockDimX/Y/Z are implemented as device functions on ROCDL.
-      //if (auto blockDim = dyn_cast<gpu::BlockDim>(opInst)) {
-      //  replaceWithIntrinsicOrDeviceFunction<ROCDL::BlockDimXOp, ROCDL::BlockDimYOp,
-      //                       ROCDL::BlockDimZOp>(blockDim, llvmDialect,
-      //                                          indexBitwidth);
-      //  return;
-      //}
-      //// GridDimX/Y/Z are implemented as device functions on ROCDL.
-      //if (auto gridDim = dyn_cast<gpu::GridDim>(opInst)) {
-      //  replaceWithIntrinsicOrDeviceFunction<ROCDL::GridDimXOp, ROCDL::GridDimYOp,
-      //                       ROCDL::GridDimZOp>(gridDim, llvmDialect,
-      //                                         indexBitwidth);
-      //  return;
-      //}
+      // BlockDimX/Y/Z are implemented as device functions on ROCDL.
+      if (auto blockDim = dyn_cast<gpu::BlockDim>(opInst)) {
+        replaceWithIntrinsicOrDeviceFunction<
+            ROCDL::BlockDimXOp, ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>(
+            blockDim, llvmDialect, indexBitwidth);
+        return;
+      }
+      // GridDimX/Y/Z are implemented as device functions on ROCDL.
+      if (auto gridDim = dyn_cast<gpu::GridDim>(opInst)) {
+        replaceWithIntrinsicOrDeviceFunction<
+            ROCDL::GridDimXOp, ROCDL::GridDimYOp, ROCDL::GridDimZOp>(
+            gridDim, llvmDialect, indexBitwidth);
+        return;
+      }
     });
   }
 };
