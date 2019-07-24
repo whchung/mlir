@@ -23,7 +23,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 
-//#include "mlir/Conversion/GPUToCUDA/GPUToCUDAPass.h"
+#include "mlir/Conversion/GPUToROCm/GPUToROCmPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
@@ -62,55 +62,6 @@ inline void emit_hip_error(const llvm::Twine &message, const char *buffer,
     }                                                                          \
   }
 
-// ROCM TODO
-//OwnedCubin compilePtxToCubin(const std::string ptx, FuncOp &function) {
-//  char jitErrorBuffer[4096] = {0};
-//
-//  RETURN_ON_CUDA_ERROR(cuInit(0), "cuInit");
-//
-//  // Linking requires a device context.
-//  CUdevice device;
-//  RETURN_ON_CUDA_ERROR(cuDeviceGet(&device, 0), "cuDeviceGet");
-//  CUcontext context;
-//  RETURN_ON_CUDA_ERROR(cuCtxCreate(&context, 0, device), "cuCtxCreate");
-//  CUlinkState linkState;
-//
-//  CUjit_option jitOptions[] = {CU_JIT_ERROR_LOG_BUFFER,
-//                               CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES};
-//  void *jitOptionsVals[] = {jitErrorBuffer,
-//                            reinterpret_cast<void *>(sizeof(jitErrorBuffer))};
-//
-//  RETURN_ON_CUDA_ERROR(cuLinkCreate(2,              /* number of jit options */
-//                                    jitOptions,     /* jit options */
-//                                    jitOptionsVals, /* jit option values */
-//                                    &linkState),
-//                       "cuLinkCreate");
-//
-//  RETURN_ON_CUDA_ERROR(
-//      cuLinkAddData(linkState, CUjitInputType::CU_JIT_INPUT_PTX,
-//                    const_cast<void *>(static_cast<const void *>(ptx.c_str())),
-//                    ptx.length(), function.getName().data(), /* kernel name */
-//                    0,       /* number of jit options */
-//                    nullptr, /* jit options */
-//                    nullptr  /* jit option values */
-//                    ),
-//      "cuLinkAddData");
-//
-//  void *cubinData;
-//  size_t cubinSize;
-//  RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &cubinData, &cubinSize),
-//                       "cuLinkComplete");
-//
-//  char *cubinAsChar = static_cast<char *>(cubinData);
-//  OwnedCubin result = llvm::make_unique<std::vector<char>>(
-//      cubinAsChar, cubinAsChar + cubinSize);
-//
-//  // This will also destroy the cubin data.
-//  RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState), "cuLinkDestroy");
-//
-//  return result;
-//}
-
 namespace {
 struct GPULaunchFuncOpLowering : public LLVMOpLowering {
 public:
@@ -139,10 +90,9 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
     patterns.push_back(llvm::make_unique<GPULaunchFuncOpLowering>(converter));
   }));
   pm.addPass(createLowerGpuOpsToROCDLOpsPass());
-  // ROCM TODO
-  //pm.addPass(createConvertGPUKernelToCubinPass(&compilePtxToCubin));
-  //pm.addPass(createGenerateCubinAccessorPass());
-  //pm.addPass(createConvertGpuLaunchFuncToCudaCallsPass());
+  pm.addPass(createConvertGPUKernelToHSACOPass(true));
+  pm.addPass(createGenerateHSACOAccessorPass());
+  pm.addPass(createConvertGpuLaunchFuncToHIPCallsPass());
 
   if (failed(pm.run(m)))
     return failure();

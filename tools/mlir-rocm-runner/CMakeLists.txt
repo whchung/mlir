@@ -51,8 +51,7 @@ if(MLIR_ROCM_RUNNER_ENABLED)
     MLIRAffineOps
     MLIRControlFlowToCFG
     MLIRGPU
-    # ROCM TODO
-    #MLIRGPUtoCUDATransforms
+    MLIRGPUtoROCMTransforms
     MLIRGPUtoROCDLTransforms
     MLIRLLVMIR
     MLIRStandardOps
