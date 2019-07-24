@@ -3,13 +3,12 @@
 func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
   %cst = constant 1 : index
   %cst2 = dim %arg1, 0 : memref<?xf32>
-  // ROCM TODO
-  //gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst, %grid_z = %cst)
-  //           threads(%tx, %ty, %tz) in (%block_x = %cst2, %block_y = %cst, %block_z = %cst)
-  //           args(%kernel_arg0 = %arg0, %kernel_arg1 = %arg1) : f32, memref<?xf32> {
-  //  store %kernel_arg0, %kernel_arg1[%tx] : memref<?xf32>
-  //  gpu.return
-  //}
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst, %grid_z = %cst)
+             threads(%tx, %ty, %tz) in (%block_x = %cst2, %block_y = %cst, %block_z = %cst)
+             args(%kernel_arg0 = %arg0, %kernel_arg1 = %arg1) : f32, memref<?xf32> {
+    store %kernel_arg0, %kernel_arg1[%tx] : memref<?xf32>
+    gpu.return
+  }
   return
 }
 
@@ -22,10 +21,12 @@ func @main() {
   call @mhipMemHostRegister(%22, %20) : (memref<?xf32>, i32) -> ()
   call @mhipPrintFloat(%22) : (memref<?xf32>) -> ()
   %24 = constant 1.0 : f32
-  call @other_func(%24, %22) : (f32, memref<?xf32>) -> ()
+  %25 = call @mhipHostGetDevicePointer(%22, %20) : (memref<?xf32>, i32) -> (memref<?xf32>)
+  call @other_func(%24, %25) : (f32, memref<?xf32>) -> ()
   call @mhipPrintFloat(%22) : (memref<?xf32>) -> ()
   return
 }
 
 func @mhipMemHostRegister(%ptr : memref<?xf32>, %flags : i32)
+func @mhipHostGetDevicePointer(%ptr : memref<?xf32>, %flags : i32) -> (memref<?xf32>)
 func @mhipPrintFloat(%ptr : memref<?xf32>)
