@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <memory.h>
+#include <iostream>
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -92,6 +93,16 @@ extern "C" void mhipMemHostRegister(const memref_t arg, int32_t flags) {
   reportErrorIfAny(
       hipHostRegister(arg.values, arg.length * sizeof(float), flags),
       "MemHostRegister");
+}
+
+extern "C" memref_t mhipHostGetDevicePointer(const memref_t arg, int32_t flags) {
+
+  float* device_ptr = nullptr;
+  reportErrorIfAny(hipSetDevice(0), "hipSetDevice");
+  reportErrorIfAny(
+		   hipHostGetDevicePointer((void**)&device_ptr, arg.values, flags),
+      "hipHostGetDevicePointer");
+  return {device_ptr, arg.length};
 }
 
 /// Prints the given float array to stderr.

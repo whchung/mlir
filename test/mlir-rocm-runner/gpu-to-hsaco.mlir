@@ -21,10 +21,12 @@ func @main() {
   call @mhipMemHostRegister(%22, %20) : (memref<?xf32>, i32) -> ()
   call @mhipPrintFloat(%22) : (memref<?xf32>) -> ()
   %24 = constant 1.0 : f32
-  call @other_func(%24, %22) : (f32, memref<?xf32>) -> ()
+  %25 = call @mhipHostGetDevicePointer(%22, %20) : (memref<?xf32>, i32) -> (memref<?xf32>)
+  call @other_func(%24, %25) : (f32, memref<?xf32>) -> ()
   call @mhipPrintFloat(%22) : (memref<?xf32>) -> ()
   return
 }
 
 func @mhipMemHostRegister(%ptr : memref<?xf32>, %flags : i32)
+func @mhipHostGetDevicePointer(%ptr : memref<?xf32>, %flags : i32) -> (memref<?xf32>)
 func @mhipPrintFloat(%ptr : memref<?xf32>)
