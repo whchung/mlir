@@ -40,6 +40,38 @@ namespace mlir {
 namespace miopen {
 
 //===----------------------------------------------------------------------===//
+// Printing/parsing for MIOpen ops
+//===----------------------------------------------------------------------===//
+
+static void printMIOpenOp(OpAsmPrinter *p, Operation *op) {
+  assert(op->getNumOperands() == 3 && "MIOpen op should have three operands");
+  assert(op->getNumResults() == 1 && "MIOpen op should have one result");
+
+  auto resultType = op->getResult(0)->getType();
+  if (op->getOperand(0)->getType() != resultType ||
+      op->getOperand(1)->getType() != resultType ||
+      op->getOperand(2)->getType() != resultType) {
+    p->printGenericOp(op);
+    return;
+  }
+
+  *p << op->getName() << ' ' << *op->getOperand(0) << ", " << *op->getOperand(1) << ", " << *op->getOperand(2);
+  p->printOptionalAttrDict(op->getAttrs());
+  *p << " : " << op->getResult(0)->getType();
+}
+
+// <operation> ::= `llvm.miopen.XYZ`
+static ParseResult parseMIOpenOp(OpAsmParser *parser, OperationState *result) {
+  SmallVector<OpAsmParser::OperandType, 3> ops;
+  Type type;
+  return failure(parser->parseOperandList(ops, 3) ||
+                 parser->parseOptionalAttributeDict(result->attributes) ||
+                 parser->parseColonType(type) ||
+                 parser->resolveOperands(ops, type, result->operands) ||
+                 parser->addTypeToList(type, result->types));
+}
+
+//===----------------------------------------------------------------------===//
 // MIOpenDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 

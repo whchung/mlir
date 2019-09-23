@@ -23,19 +23,26 @@
 #else
 #define MIOpenIR_OPS
 
-include "mlir/LLVMIR/LLVMOpBase.td"
+include "mlir/IR/OpBase.td"
 
 def MIOpen_Dialect : Dialect {
   let name = "miopen";
   let cppNamespace = "miopen";
 }
 
-class MIOpen_KernelFunctionOp<string mnemonic, string kernel_function, list<OpTrait> traits = []> :
-  LLVM_OpBase<MIOpen_Dialect, mnemonic, traits>,
-  Arguments<(ins F32Tensor:$input, F32Tensor:$output, F32Tensor:$weight)> {
-  string llvmBuilder = "createMIOpenKernelFunctionCall(builder, \""# kernel_function # "\");";
+class MIOpen_KernelFunctionOp<string mnemonic, string kernelFunction, Type tensorType, list<OpTrait> traits = []> :
+  Op<MIOpen_Dialect, mnemonic, traits>,
+  Results<(outs tensorType:$res)>,
+  Arguments<(ins tensorType:$input, tensorType:$output, tensorType:$weight)> {
+  let parser = [{ return parseMIOpenOp(parser, result); }];
+  let printer = [{ printMIOpenOp(p, this->getOperation()); }];
+
+  // TBD should MIOpen_KernelFunctionOp be a subclass of LLVM_OpBase?
+  //string llvmBuilder = "createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\");";
 }
 
-def MIOpen_Conv2DOp : MIOpen_KernelFunctionOp<"conv2d", "miopen_conv2d_kernel">;
+def MIOpen_Conv2D_F32Op : MIOpen_KernelFunctionOp<"conv2d.f32", "miopen_conv2d_f32_kernel", F32Tensor>;
+def MIOpen_Conv2D_F16Op : MIOpen_KernelFunctionOp<"conv2d.f16", "miopen_conv2d_f16_kernel", F16Tensor>;
+def MIOpen_Conv2D_BF16Op : MIOpen_KernelFunctionOp<"conv2d.bf16", "miopen_conv2d_bf16_kernel", BF16Tensor>;
 
 #endif // MIOpenIR_OPS

@@ -31,5 +31,6 @@ add_llvm_library(MLIRMIOPENIR
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/LLVMIR
   )
-add_dependencies(MLIRMIOPENIR MLIRMIOPENOpsIncGen MLIRMIOPENConversionsIncGen LLVMAsmParser LLVMCore LLVMSupport)
+#add_dependencies(MLIRMIOPENIR MLIRMIOPENOpsIncGen MLIRMIOPENConversionsIncGen LLVMAsmParser LLVMCore LLVMSupport)
+add_dependencies(MLIRMIOPENIR MLIRMIOPENOpsIncGen LLVMAsmParser LLVMCore LLVMSupport)
 target_link_libraries(MLIRMIOPENIR LLVMAsmParser LLVMCore LLVMSupport)
