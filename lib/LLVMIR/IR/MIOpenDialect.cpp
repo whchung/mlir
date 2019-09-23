@@ -44,17 +44,17 @@ namespace miopen {
 //===----------------------------------------------------------------------===//
 
 MIOpenDialect::MIOpenDialect(MLIRContext *context) : Dialect("miopen", context) {
-//  addOperations<
-//#define GET_OP_LIST
-//#include "mlir/LLVMIR/MIOpenOps.cpp.inc"
-//      >();
+  addOperations<
+#define GET_OP_LIST
+#include "mlir/LLVMIR/MIOpenOps.cpp.inc"
+      >();
 
   // Support unknown operations because not all MIOpen operations are registered.
   allowUnknownOperations();
 }
 
-//#define GET_OP_CLASSES
-//#include "mlir/LLVMIR/MIOpenOps.cpp.inc"
+#define GET_OP_CLASSES
+#include "mlir/LLVMIR/MIOpenOps.cpp.inc"
 
 static DialectRegistration<MIOpenDialect> miopenDialect;
 
