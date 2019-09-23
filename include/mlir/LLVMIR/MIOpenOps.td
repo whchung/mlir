@@ -1,4 +1,4 @@
-//===- MIOpenDialect.h - MLIR MIOpen IR dialect ---------------------*- C++ -*-===//
+//===-- MIOpenOps.td - MIOpen IR dialect op definition file ----*- tablegen -*-===//
 //
 // Copyright 2019 The MLIR Authors.
 //
@@ -15,30 +15,27 @@
 // limitations under the License.
 // =============================================================================
 //
-// This file defines the MIOpen IR dialect in MLIR, containing MIOpen operations and
-// MIOpen specific extensions to the LLVM type system.
+// This is the MIOpen IR operation definition file.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_LLVMIR_MIOPENDIALECT_H_
-#define MLIR_LLVMIR_MIOPENDIALECT_H_
+#ifdef MIOpenIR_OPS
+#else
+#define MIOpenIR_OPS
 
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
-namespace mlir {
-namespace miopen {
+include "mlir/LLVMIR/LLVMOpBase.td"
 
-///// Ops /////
-#define GET_OP_CLASSES
-#include "mlir/LLVMIR/MIOpenOps.h.inc"
+def MIOpen_Dialect : Dialect {
+  let name = "miopen";
+  let cppNamespace = "miopen";
+}
 
-class MIOpenDialect : public Dialect {
-public:
-  explicit MIOpenDialect(MLIRContext *context);
-};
+class MIOpen_KernelFunctionOp<string mnemonic, string kernel_function, list<OpTrait> traits = []> :
+  LLVM_OpBase<MIOpen_Dialect, mnemonic, traits>,
+  Arguments<(ins F32Tensor:$input, F32Tensor:$output, F32Tensor:$weight)> {
+  string llvmBuilder = "createMIOpenKernelFunctionCall(builder, \""# kernel_function # "\");";
+}
 
-} // namespace miopen
-} // namespace mlir
+def MIOpen_Conv2DOp : MIOpen_KernelFunctionOp<"conv2d", "miopen_conv2d_kernel">;
 
-#endif /* MLIR_LLVMIR_MIOpenDIALECT_H_ */
-
+#endif // MIOpenIR_OPS
