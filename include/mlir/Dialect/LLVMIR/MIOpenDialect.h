@@ -30,7 +30,7 @@ namespace miopen {
 
 ///// Ops /////
 #define GET_OP_CLASSES
-#include "mlir/LLVMIR/MIOpenOps.h.inc"
+#include "mlir/Dialect/LLVMIR/MIOpenOps.h.inc"
 
 class MIOpenDialect : public Dialect {
 public:

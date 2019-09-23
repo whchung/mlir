@@ -8,6 +8,7 @@ set(LIBS
   MLIRSPIRVSerialization
   MLIRStandardOps
   MLIRTargetLLVMIR
+  MLIRTargetMIOPENIR
   MLIRTargetNVVMIR
   MLIRTargetROCDLIR
   MLIRTransforms

@@ -23,13 +23,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/LLVMIR/MIOpenDialect.h"
+#include "mlir/Dialect/LLVMIR/MIOpenDialect.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/LLVMIR/LLVMDialect.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -40,13 +40,45 @@ namespace mlir {
 namespace miopen {
 
 //===----------------------------------------------------------------------===//
+// Printing/parsing for MIOpen ops
+//===----------------------------------------------------------------------===//
+
+static void printMIOpenOp(OpAsmPrinter &p, Operation *op) {
+  assert(op->getNumOperands() == 3 && "MIOpen op should have three operands");
+  assert(op->getNumResults() == 1 && "MIOpen op should have one result");
+
+  auto resultType = op->getResult(0)->getType();
+  if (op->getOperand(0)->getType() != resultType ||
+      op->getOperand(1)->getType() != resultType ||
+      op->getOperand(2)->getType() != resultType) {
+    p.printGenericOp(op);
+    return;
+  }
+
+  p << op->getName() << ' ' << *op->getOperand(0) << ", " << *op->getOperand(1) << ", " << *op->getOperand(2);
+  p.printOptionalAttrDict(op->getAttrs());
+  p << " : " << op->getResult(0)->getType();
+}
+
+// <operation> ::= `llvm.miopen.XYZ`
+static ParseResult parseMIOpenOp(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 3> ops;
+  Type type;
+  return failure(parser.parseOperandList(ops, 3) ||
+                 parser.parseOptionalAttributeDict(result.attributes) ||
+                 parser.parseColonType(type) ||
+                 parser.resolveOperands(ops, type, result.operands) ||
+                 parser.addTypeToList(type, result.types));
+}
+
+//===----------------------------------------------------------------------===//
 // MIOpenDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
 MIOpenDialect::MIOpenDialect(MLIRContext *context) : Dialect("miopen", context) {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/LLVMIR/MIOpenOps.cpp.inc"
+#include "mlir/Dialect/LLVMIR/MIOpenOps.cpp.inc"
       >();
 
   // Support unknown operations because not all MIOpen operations are registered.
@@ -54,7 +86,7 @@ MIOpenDialect::MIOpenDialect(MLIRContext *context) : Dialect("miopen", context) 
 }
 
 #define GET_OP_CLASSES
-#include "mlir/LLVMIR/MIOpenOps.cpp.inc"
+#include "mlir/Dialect/LLVMIR/MIOpenOps.cpp.inc"
 
 static DialectRegistration<MIOpenDialect> miopenDialect;
 
