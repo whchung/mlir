@@ -27,6 +27,7 @@ set(LIBS
   MLIRGPUtoROCDLTransforms
   MLIRLinalg
   MLIRLLVMIR
+  MLIRMIOPENIR
   MLIRNVVMIR
   MLIROptMain
   MLIRParser
