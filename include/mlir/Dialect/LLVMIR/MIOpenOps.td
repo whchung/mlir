@@ -23,7 +23,7 @@
 #else
 #define MIOpenIR_OPS
 
-include "mlir/IR/OpBase.td"
+include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 def MIOpen_Dialect : Dialect {
   let name = "miopen";
@@ -31,14 +31,13 @@ def MIOpen_Dialect : Dialect {
 }
 
 class MIOpen_KernelFunctionOp<string mnemonic, string kernelFunction, Type memrefType, list<OpTrait> traits = []> :
-  Op<MIOpen_Dialect, mnemonic, traits>,
+  LLVM_OpBase<MIOpen_Dialect, mnemonic, traits>,
   Results<(outs memrefType:$res)>,
   Arguments<(ins memrefType:$input, memrefType:$output, memrefType:$weight)> {
   let parser = [{ return parseMIOpenOp(parser, result); }];
   let printer = [{ printMIOpenOp(p, this->getOperation()); }];
 
-  // TBD should MIOpen_KernelFunctionOp be a subclass of LLVM_OpBase?
-  //string llvmBuilder = "createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\");";
+  string llvmBuilder = "$res = createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\");";
 }
 
 def MIOpen_Conv2D_F32Op : MIOpen_KernelFunctionOp<"conv2d.f32", "miopen_conv2d_f32_kernel", F32MemRef>;
