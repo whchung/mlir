@@ -38,9 +38,7 @@ class MIOpen_KernelFunctionOp<string mnemonic, string kernelFunction, list<OpTra
   let parser = [{ return parseMIOpenOp(parser, result); }];
   let printer = [{ printMIOpenOp(p, this->getOperation()); }];
 
-  string llvmBuilder = [{
-      $res = createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\", {$input, $output, $weight});
-  }];
+  string llvmBuilder = "$res = createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\", {$input, $output, $weight});";
 }
 
 def MIOpen_Conv2D_F32Op : MIOpen_KernelFunctionOp<"conv2d.f32", "miopen_conv2d_f32_kernel">;

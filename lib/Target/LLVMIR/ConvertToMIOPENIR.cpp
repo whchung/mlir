@@ -39,30 +39,24 @@ using namespace mlir;
 namespace {
 
 static llvm::Value *createMIOpenKernelFunctionCall(llvm::IRBuilder<> &builder,
-                                                   StringRef fn_name) {
+                                                   StringRef fn_name,
+                                                   ArrayRef<llvm::Value *> args) {
+  assert(args.size() == 3 && "MIOpen kernel function call must take 3 arguments");
+
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   std::vector<llvm::Type*> ArgTypes;
-  ArgTypes.push_back(llvm::Type::getFloatPtrTy(module->getContext()));
-  ArgTypes.push_back(llvm::Type::getFloatPtrTy(module->getContext()));
-  ArgTypes.push_back(llvm::Type::getFloatPtrTy(module->getContext()));
+  ArgTypes.push_back(args[0]->getType());
+  ArgTypes.push_back(args[1]->getType());
+  ArgTypes.push_back(args[2]->getType());
 
   llvm::FunctionType *fn_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(module->getContext()), // return type.
       ArgTypes, // parameter type.
-      false);                                       // no variadic arguments.
+      false);   // no variadic arguments.
   llvm::Function *fn = llvm::dyn_cast<llvm::Function>(
       module->getOrInsertFunction(fn_name, fn_type).getCallee());
 
-  // FIXME get memref from tensor
-  std::vector<llvm::Value *> operands;
-  operands.push_back(llvm::ConstantPointerNull::get(
-      llvm::Type::getFloatPtrTy(module->getContext())));
-  operands.push_back(llvm::ConstantPointerNull::get(
-      llvm::Type::getFloatPtrTy(module->getContext())));
-  operands.push_back(llvm::ConstantPointerNull::get(
-      llvm::Type::getFloatPtrTy(module->getContext())));
-
-  return builder.CreateCall(fn, operands);
+  return builder.CreateCall(fn, args);
 }
 
 class ModuleTranslation : public LLVM::ModuleTranslation {
@@ -76,7 +70,7 @@ protected:
   LogicalResult convertOperation(Operation &opInst,
                         llvm::IRBuilder<> &builder) override {
 
-//#include "mlir/LLVMIR/MIOpenConversions.inc"
+#include "mlir/Dialect/LLVMIR/MIOpenConversions.inc"
 
     return LLVM::ModuleTranslation::convertOperation(opInst, builder);
   }
