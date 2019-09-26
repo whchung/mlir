@@ -60,15 +60,21 @@ static void printMIOpenOp(OpAsmPrinter &p, Operation *op) {
   p << " : " << op->getResult(0)->getType();
 }
 
-// <operation> ::= `llvm.miopen.XYZ`
+// <operation> ::= `miopen.conv2d.xxx` arg0 arg1 arg2 : result-type
 static ParseResult parseMIOpenOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 3> ops;
+  SmallVector<OpAsmParser::OperandType, 3> operands;
   Type type;
-  return failure(parser.parseOperandList(ops, 3) ||
-                 parser.parseOptionalAttributeDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperands(ops, type, result.operands) ||
-                 parser.addTypeToList(type, result.types));
+  llvm::SMLoc trailingTypeLoc;
+  if (parser.parseOperandList(operands, 3) ||
+      parser.parseOptionalAttributeDict(result.attributes) ||
+      parser.parseColonType(type))
+    return failure();
+
+  if (parser.resolveOperands(operands, type, result.operands))
+    return failure();
+
+  result.addTypes(type);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

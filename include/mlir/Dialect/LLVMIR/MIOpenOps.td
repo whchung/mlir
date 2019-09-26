@@ -30,18 +30,21 @@ def MIOpen_Dialect : Dialect {
   let cppNamespace = "miopen";
 }
 
-class MIOpen_KernelFunctionOp<string mnemonic, string kernelFunction, Type memrefType, list<OpTrait> traits = []> :
+class MIOpen_KernelFunctionOp<string mnemonic, string kernelFunction, list<OpTrait> traits = []> :
   LLVM_OpBase<MIOpen_Dialect, mnemonic, traits>,
-  Results<(outs memrefType:$res)>,
-  Arguments<(ins memrefType:$input, memrefType:$output, memrefType:$weight)> {
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_Type:$input, LLVM_Type:$output, LLVM_Type:$weight)> {
+
   let parser = [{ return parseMIOpenOp(parser, result); }];
   let printer = [{ printMIOpenOp(p, this->getOperation()); }];
 
-  string llvmBuilder = "$res = createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\");";
+  string llvmBuilder = [{
+      $res = createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\", {$input, $output, $weight});
+  }];
 }
 
-def MIOpen_Conv2D_F32Op : MIOpen_KernelFunctionOp<"conv2d.f32", "miopen_conv2d_f32_kernel", F32MemRef>;
-def MIOpen_Conv2D_F16Op : MIOpen_KernelFunctionOp<"conv2d.f16", "miopen_conv2d_f16_kernel", F16MemRef>;
-def MIOpen_Conv2D_BF16Op : MIOpen_KernelFunctionOp<"conv2d.bf16", "miopen_conv2d_bf16_kernel", BF16MemRef>;
+def MIOpen_Conv2D_F32Op : MIOpen_KernelFunctionOp<"conv2d.f32", "miopen_conv2d_f32_kernel">;
+def MIOpen_Conv2D_F16Op : MIOpen_KernelFunctionOp<"conv2d.f16", "miopen_conv2d_f16_kernel">;
+def MIOpen_Conv2D_BF16Op : MIOpen_KernelFunctionOp<"conv2d.bf16", "miopen_conv2d_bf16_kernel">;
 
 #endif // MIOpenIR_OPS
