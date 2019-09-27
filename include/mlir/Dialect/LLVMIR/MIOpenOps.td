@@ -87,6 +87,7 @@ def MIOpen_LowLevelDummyOp : MIOpen_LowLevelOp<"dummy.low">,
 
   let parser = [{ return parseMIOpenDummyOp(parser, result); }];
   let printer = [{ printMIOpenDummyOp(p, this->getOperation()); }];
+  string llvmBuilder = "$res = createMIOpenDummyCall(builder, \"dummy.low\");";
 }
 
 #endif // MIOpenIR_OPS
