@@ -31,6 +31,26 @@ def MIOpen_Dialect : Dialect {
 }
 
 //===----------------------------------------------------------------------===//
+// Base class for high-level ops                                              //
+//===----------------------------------------------------------------------===//
+
+class MIOpen_HighLevelOp<string mnemonic, list<OpTrait> traits = []> :
+  Op<MIOpen_Dialect, mnemonic, traits> {
+}
+
+//===----------------------------------------------------------------------===//
+// Experimental high-level dummy op                                           //
+//===----------------------------------------------------------------------===//
+
+def MIOpen_HighLevelDummyOp : MIOpen_HighLevelOp<"dummy.high">,
+  Results<(outs)>,
+  Arguments<(ins)> {
+
+  let parser = [{ return success(); }];
+  let printer = [{ printMIOpenDummyOp(p, this->getOperation()); }];
+}
+
+//===----------------------------------------------------------------------===//
 // Base class for low-level ops                                               //
 //===----------------------------------------------------------------------===//
 

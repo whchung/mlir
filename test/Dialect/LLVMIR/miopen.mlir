@@ -23,3 +23,9 @@ func @miopen_op_dummy_low() {
   miopen.dummy.low
   llvm.return
 }
+
+func @miopen_op_dummy_high() {
+  // CHECK: miopen.dummy.high
+  miopen.dummy.high
+  llvm.return
+}
