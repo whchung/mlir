@@ -17,3 +17,9 @@ func @miopen_op_conv2d_bf16(%arg0 : !llvm<"i16*">, %arg1 : !llvm<"i16*">, %arg2 
   miopen.conv2d.bf16 %arg0, %arg1, %arg2 : !llvm<"i16*">
   llvm.return
 }
+
+func @miopen_op_dummy_low() {
+  // CHECK: miopen.dummy.low
+  miopen.dummy.low
+  llvm.return
+}

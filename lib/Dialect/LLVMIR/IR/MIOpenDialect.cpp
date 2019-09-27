@@ -43,7 +43,14 @@ namespace miopen {
 // Printing/parsing for MIOpen ops
 //===----------------------------------------------------------------------===//
 
-static void printMIOpenOp(OpAsmPrinter &p, Operation *op) {
+static void printMIOpenDummyOp(OpAsmPrinter &p, Operation *op) {
+  p << op->getName() << ' ';
+  p.printOperands(op->getOperands());
+  if (op->getNumResults() > 0)
+    interleaveComma(op->getResultTypes(), p << " : ");
+}
+
+static void printMIOpenKernelFunctionOp(OpAsmPrinter &p, Operation *op) {
   assert(op->getNumOperands() == 3 && "MIOpen op should have three operands");
   assert(op->getNumResults() == 1 && "MIOpen op should have one result");
 
@@ -60,8 +67,8 @@ static void printMIOpenOp(OpAsmPrinter &p, Operation *op) {
   p << " : " << op->getResult(0)->getType();
 }
 
-// <operation> ::= `miopen.conv2d.xxx` arg0 arg1 arg2 : result-type
-static ParseResult parseMIOpenOp(OpAsmParser &parser, OperationState &result) {
+// <operation> ::= `miopen.conv2d.xxx` arg0 arg1 arg2 : arg-type
+static ParseResult parseMIOpenKernelFunctionOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 3> operands;
   Type type;
   llvm::SMLoc trailingTypeLoc;

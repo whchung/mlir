@@ -30,13 +30,25 @@ def MIOpen_Dialect : Dialect {
   let cppNamespace = "miopen";
 }
 
+//===----------------------------------------------------------------------===//
+// Base class for low-level ops                                               //
+//===----------------------------------------------------------------------===//
+
+class MIOpen_LowLevelOp<string mnemonic, list<OpTrait> traits = []> :
+  LLVM_OpBase<MIOpen_Dialect, mnemonic, traits> {
+}
+
+//===----------------------------------------------------------------------===//
+// Low-level kernel function ops                                              //
+//===----------------------------------------------------------------------===//
+
 class MIOpen_KernelFunctionOp<string mnemonic, string kernelFunction, list<OpTrait> traits = []> :
-  LLVM_OpBase<MIOpen_Dialect, mnemonic, traits>,
+  MIOpen_LowLevelOp<mnemonic, traits>,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_Type:$input, LLVM_Type:$output, LLVM_Type:$weight)> {
 
-  let parser = [{ return parseMIOpenOp(parser, result); }];
-  let printer = [{ printMIOpenOp(p, this->getOperation()); }];
+  let parser = [{ return parseMIOpenKernelFunctionOp(parser, result); }];
+  let printer = [{ printMIOpenKernelFunctionOp(p, this->getOperation()); }];
 
   string llvmBuilder = "$res = createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\", {$input, $output, $weight});";
 }
@@ -44,5 +56,17 @@ class MIOpen_KernelFunctionOp<string mnemonic, string kernelFunction, list<OpTra
 def MIOpen_Conv2D_F32Op : MIOpen_KernelFunctionOp<"conv2d.f32", "miopen_conv2d_f32_kernel">;
 def MIOpen_Conv2D_F16Op : MIOpen_KernelFunctionOp<"conv2d.f16", "miopen_conv2d_f16_kernel">;
 def MIOpen_Conv2D_BF16Op : MIOpen_KernelFunctionOp<"conv2d.bf16", "miopen_conv2d_bf16_kernel">;
+
+//===----------------------------------------------------------------------===//
+// Experimental low-level dummy op                                            //
+//===----------------------------------------------------------------------===//
+
+def MIOpen_LowLevelDummyOp : MIOpen_LowLevelOp<"dummy.low">,
+  Results<(outs)>,
+  Arguments<(ins)> {
+
+  let parser = [{ return success(); }];
+  let printer = [{ printMIOpenDummyOp(p, this->getOperation()); }];
+}
 
 #endif // MIOpenIR_OPS
