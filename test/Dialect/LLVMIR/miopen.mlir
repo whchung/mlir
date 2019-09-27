@@ -18,14 +18,14 @@ func @miopen_op_conv2d_bf16(%arg0 : !llvm<"i16*">, %arg1 : !llvm<"i16*">, %arg2 
   llvm.return
 }
 
-func @miopen_op_dummy_low() {
-  // CHECK: miopen.dummy.low
-  miopen.dummy.low
+func @miopen_op_dummy_low(%arg0 : !llvm<"float*">) {
+  // CHECK: miopen.dummy.low %{{.*}} : !llvm<"float*">
+  miopen.dummy.low %arg0 : !llvm<"float*">
   llvm.return
 }
 
-func @miopen_op_dummy_high() {
-  // CHECK: miopen.dummy.high
-  miopen.dummy.high
+func @miopen_op_dummy_high(%arg0 : memref<16xf32>) {
+  // CHECK: miopen.dummy.high %{{.*}} : memref<16xf32>
+  miopen.dummy.high %arg0 : memref<16xf32>
   llvm.return
 }

@@ -50,6 +50,17 @@ static void printMIOpenDummyOp(OpAsmPrinter &p, Operation *op) {
     interleaveComma(op->getResultTypes(), p << " : ");
 }
 
+// <operation> ::= `miopen.dummy.xxx` arg0
+static ParseResult parseMIOpenDummyOp(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::OperandType operand;
+  Type type;
+  return failure (parser.parseOperand(operand) ||
+      parser.parseOptionalAttributeDict(result.attributes) ||
+      parser.parseColonType(type) ||
+      parser.resolveOperand(operand, type, result.operands) ||
+      parser.addTypeToList(type, result.types));
+}
+
 static void printMIOpenKernelFunctionOp(OpAsmPrinter &p, Operation *op) {
   assert(op->getNumOperands() == 3 && "MIOpen op should have three operands");
   assert(op->getNumResults() == 1 && "MIOpen op should have one result");

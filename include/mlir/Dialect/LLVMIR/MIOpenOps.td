@@ -43,10 +43,10 @@ class MIOpen_HighLevelOp<string mnemonic, list<OpTrait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 def MIOpen_HighLevelDummyOp : MIOpen_HighLevelOp<"dummy.high">,
-  Results<(outs)>,
-  Arguments<(ins)> {
+  Results<(outs AnyType)>,
+  Arguments<(ins AnyType)> {
 
-  let parser = [{ return success(); }];
+  let parser = [{ return parseMIOpenDummyOp(parser, result); }];
   let printer = [{ printMIOpenDummyOp(p, this->getOperation()); }];
 }
 
@@ -82,10 +82,10 @@ def MIOpen_Conv2D_BF16Op : MIOpen_KernelFunctionOp<"conv2d.bf16", "miopen_conv2d
 //===----------------------------------------------------------------------===//
 
 def MIOpen_LowLevelDummyOp : MIOpen_LowLevelOp<"dummy.low">,
-  Results<(outs)>,
-  Arguments<(ins)> {
+  Results<(outs AnyType)>,
+  Arguments<(ins AnyType)> {
 
-  let parser = [{ return success(); }];
+  let parser = [{ return parseMIOpenDummyOp(parser, result); }];
   let printer = [{ printMIOpenDummyOp(p, this->getOperation()); }];
 }
 
