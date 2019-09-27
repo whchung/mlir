@@ -35,6 +35,7 @@ namespace miopen {
 class MIOpenDialect : public Dialect {
 public:
   explicit MIOpenDialect(MLIRContext *context);
+  static StringRef getDialectNamespace() { return "miopen"; }
 };
 
 } // namespace miopen
