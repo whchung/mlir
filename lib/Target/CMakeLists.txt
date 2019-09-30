@@ -50,7 +50,7 @@ add_llvm_library(MLIRTargetMIOPENIR
   DEPENDS
   intrinsics_gen
   )
-target_link_libraries(MLIRTargetROCDLIR
+target_link_libraries(MLIRTargetMIOPENIR
   MLIRGPU
   MLIRIR
   MLIRMIOPENIR
