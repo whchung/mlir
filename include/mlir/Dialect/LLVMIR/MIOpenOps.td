@@ -82,12 +82,12 @@ def MIOpen_Conv2D_BF16Op : MIOpen_KernelFunctionOp<"conv2d.bf16", "miopen_conv2d
 //===----------------------------------------------------------------------===//
 
 def MIOpen_LowLevelDummyOp : MIOpen_LowLevelOp<"dummy.low">,
-  Results<(outs AnyType)>,
+  Results<(outs LLVM_Type:$res)>,
   Arguments<(ins AnyType)> {
 
   let parser = [{ return parseMIOpenDummyOp(parser, result); }];
   let printer = [{ printMIOpenDummyOp(p, this->getOperation()); }];
-  string llvmBuilder = "$res = createMIOpenDummyCall(builder, \"dummy.low\");";
+  string llvmBuilder = "$res = createMIOpenDummyCall(builder, \"miopen_dummy_low\");";
 }
 
 #endif // MIOpenIR_OPS
