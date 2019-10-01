@@ -78,7 +78,7 @@ static void printMIOpenKernelFunctionOp(OpAsmPrinter &p, Operation *op) {
   p << " : " << op->getResult(0)->getType();
 }
 
-// <operation> ::= `miopen.conv2d.xxx` arg0 arg1 arg2 : arg-type
+// <operation> ::= `miopen.conv2d.kernel.xxx` arg0 arg1 arg2 : arg-type
 static ParseResult parseMIOpenKernelFunctionOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 3> operands;
   Type type;

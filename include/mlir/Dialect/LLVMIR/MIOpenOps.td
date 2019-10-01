@@ -73,9 +73,9 @@ class MIOpen_KernelFunctionOp<string mnemonic, string kernelFunction, list<OpTra
   string llvmBuilder = "$res = createMIOpenKernelFunctionCall(builder, \""# kernelFunction # "\", {$input, $output, $weight});";
 }
 
-def MIOpen_Conv2D_F32Op : MIOpen_KernelFunctionOp<"conv2d.f32", "miopen_conv2d_f32_kernel">;
-def MIOpen_Conv2D_F16Op : MIOpen_KernelFunctionOp<"conv2d.f16", "miopen_conv2d_f16_kernel">;
-def MIOpen_Conv2D_BF16Op : MIOpen_KernelFunctionOp<"conv2d.bf16", "miopen_conv2d_bf16_kernel">;
+def MIOpen_Conv2D_KernelFunction_F32Op : MIOpen_KernelFunctionOp<"conv2d.kernel.f32", "miopen_conv2d_f32_kernel">;
+def MIOpen_Conv2D_F16_KernelFunction_F16Op : MIOpen_KernelFunctionOp<"conv2d.kernel.f16", "miopen_conv2d_f16_kernel">;
+def MIOpen_Conv2D_KernelFunction_BF16Op : MIOpen_KernelFunctionOp<"conv2d.kernel.bf16", "miopen_conv2d_bf16_kernel">;
 
 //===----------------------------------------------------------------------===//
 // Experimental low-level dummy op                                            //
