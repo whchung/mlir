@@ -43,8 +43,8 @@ class MIOpen_HighLevelOp<string mnemonic, list<OpTrait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 def MIOpen_HighLevelDummyOp : MIOpen_HighLevelOp<"dummy.high">,
-  Results<(outs AnyType:$res)>,
-  Arguments<(ins AnyType:$input)> {
+  Results<(outs AnyMemRef:$res)>,
+  Arguments<(ins AnyMemRef:$input)> {
 
   let parser = [{ return parseMIOpenDummyOp(parser, result); }];
   let printer = [{ printMIOpenDummyOp(p, this->getOperation()); }];
