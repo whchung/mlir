@@ -54,32 +54,16 @@ public:
   matchAndRewrite(Operation *op, ArrayRef<Value *> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op->getLoc();
-    auto highLevelDummyOp = cast<miopen::HighLevelDummyOp>(op);
-    //auto adaptor = miopen::HighLevelDummyOpOperandAdaptor(operands);
-    //auto inputMemRefType = highLevelDummyOp.input()->getType().cast<MemRefType>();
-    //auto llvmInputType = lowering.convertType(inputMemRefType);
-    auto resultType = highLevelDummyOp.getResult()->getType();
-    auto llvmResultType = converter.convertType(resultType);
+    auto llvmResultType = converter.convertType(operands[0]->getType()).cast<LLVM::LLVMType>();
+    auto llvmPointerType = llvmResultType.getStructElementType(0);
 
-    // XXX FIXME convert MemRefType to LLVM type, add extract element op
-    Value *newOp = rewriter.create<miopen::LowLevelDummyOp>(
-        loc, llvmResultType, highLevelDummyOp.input());
-    rewriter.replaceOp(op, newOp);
-    return matchSuccess();
-  }
+    Value *extractValueOp = rewriter.create<LLVM::ExtractValueOp>(
+        loc, llvmPointerType, operands[0],
+        rewriter.getIndexArrayAttr(0));
+    Value *lowLevelOp = rewriter.create<miopen::LowLevelDummyOp>(
+        loc, llvmPointerType, extractValueOp);
+    rewriter.replaceOp(op, lowLevelOp);
 
-  TypeConverter &converter;
-};
-
-class LowLevelDummyOpConversion : public ConversionPattern {
-public:
-  explicit LowLevelDummyOpConversion(MLIRContext *context, TypeConverter &converter)
-      : ConversionPattern(miopen::LowLevelDummyOp::getOperationName(), 1, context),
-        converter(converter) {}
-
-  PatternMatchResult
-  matchAndRewrite(Operation *op, ArrayRef<Value *> operands,
-                  ConversionPatternRewriter &rewriter) const override {
     return matchSuccess();
   }
 
@@ -96,11 +80,12 @@ void LowerMIOpenHighToLowPass::runOnModule() {
   // Convert to MIOpen low-level dialect using the converter defined above.
   OwningRewritePatternList patterns;
   LLVMTypeConverter typeConverter(&getContext());
-  patterns.insert<HighLevelDummyOpConversion,
-                  LowLevelDummyOpConversion>(&getContext(), typeConverter);
+  patterns.insert<HighLevelDummyOpConversion>(&getContext(), typeConverter);
   mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(), typeConverter);
 
   ConversionTarget target(getContext());
+  target.addLegalDialect<LLVM::LLVMDialect>();
+  target.addLegalOp<miopen::LowLevelDummyOp>();
   target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
     return typeConverter.isSignatureLegal(op.getType());
   });
