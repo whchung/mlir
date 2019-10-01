@@ -39,6 +39,23 @@ class MIOpen_HighLevelOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 //===----------------------------------------------------------------------===//
+// High-level convolution ops                                                 //
+//===----------------------------------------------------------------------===//
+
+class MIOpen_Conv2DOp<string mnemonic, Type memRefType, list<OpTrait> traits = []> :
+  MIOpen_HighLevelOp<mnemonic, traits>,
+  Results<(outs memRefType:$res)>,
+  Arguments<(ins memRefType:$input, memRefType:$output, memRefType:$weight)> {
+
+  let parser = [{ return parseMIOpenConv2DOp(parser, result); }];
+  let printer = [{ return printMIOpenConv2DOp(p, this->getOperation()); }];
+}
+
+def MIOpen_Conv2D_F32Op : MIOpen_Conv2DOp<"conv2d.f32", F32MemRef>;
+def MIOpen_Conv2D_F16Op : MIOpen_Conv2DOp<"conv2d.f16", F16MemRef>;
+def MIOpen_Conv2D_BF16Op : MIOpen_Conv2DOp<"conv2d.bf16", BF16MemRef>;
+
+//===----------------------------------------------------------------------===//
 // Experimental high-level dummy op                                           //
 //===----------------------------------------------------------------------===//
 

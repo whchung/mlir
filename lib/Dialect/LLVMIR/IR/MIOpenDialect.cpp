@@ -95,6 +95,15 @@ static ParseResult parseMIOpenKernelFunctionOp(OpAsmParser &parser, OperationSta
   return success();
 }
 
+static void printMIOpenConv2DOp(OpAsmPrinter &p, Operation *op) {
+  printMIOpenKernelFunctionOp(p, op);
+}
+
+// <operation> ::= `miopen.conv2d.xxx` arg0 arg1 arg2 : arg-type
+static ParseResult parseMIOpenConv2DOp(OpAsmParser &parser, OperationState &result) {
+  return parseMIOpenKernelFunctionOp(parser, result);
+}
+
 //===----------------------------------------------------------------------===//
 // MIOpenDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
