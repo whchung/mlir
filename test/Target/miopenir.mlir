@@ -2,8 +2,10 @@
 
 // CHECK-LABEL: define void @miopen_op_dummy_low({ float*, [1 x i64] } %{{.*}}) {
 func @miopen_op_dummy_low(%arg0 : !llvm<"{ float*, [1 x i64] }">) {
-  // CHECK: call void @miopen_dummy_low()
-  miopen.dummy.low %arg0 : !llvm<"{ float*, [1 x i64] }">
+  %ptr = llvm.extractvalue %arg0[0] : !llvm<"{ float*, [1 x i64] }">
+
+  // CHECK: call void @miopen_dummy_low(float* %{{.*}})
+  miopen.dummy.low %ptr : !llvm<"float*">
   llvm.return
 }
 

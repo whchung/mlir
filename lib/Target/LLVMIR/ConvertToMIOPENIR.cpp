@@ -39,9 +39,13 @@ using namespace mlir;
 namespace {
 
 static llvm::Value *createMIOpenDummyCall(llvm::IRBuilder<> &builder,
-                                          StringRef fn_name) {
+                                          StringRef fn_name,
+                                          ArrayRef<llvm::Value *> args) {
+  assert(args.size() == 1 && "MIOpen dummy op call must take 1 argument");
+
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   std::vector<llvm::Type*> ArgTypes;
+  ArgTypes.push_back(args[0]->getType());
 
   llvm::FunctionType *fn_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(module->getContext()), // return type.
@@ -50,7 +54,7 @@ static llvm::Value *createMIOpenDummyCall(llvm::IRBuilder<> &builder,
   llvm::Function *fn = llvm::dyn_cast<llvm::Function>(
       module->getOrInsertFunction(fn_name, fn_type).getCallee());
 
-  return builder.CreateCall(fn);
+  return builder.CreateCall(fn, args);
 }
 
 static llvm::Value *createMIOpenKernelFunctionCall(llvm::IRBuilder<> &builder,
