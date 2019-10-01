@@ -44,8 +44,7 @@
 
 using namespace mlir;
 
-class HighLevelDummyOpConversion : public ConversionPattern {
-public:
+struct HighLevelDummyOpConversion : public ConversionPattern {
   explicit HighLevelDummyOpConversion(MLIRContext *context, TypeConverter &converter)
       : ConversionPattern(miopen::HighLevelDummyOp::getOperationName(), 1, context),
         converter(converter) {}
@@ -70,6 +69,35 @@ public:
   TypeConverter &converter;
 };
 
+template<typename T, typename U>
+struct Conv2D_OpConversion : public ConversionPattern {
+  explicit Conv2D_OpConversion(MLIRContext *context, TypeConverter &converter)
+      : ConversionPattern(T::getOperationName(), 1, context),
+        converter(converter) {}
+
+  PatternMatchResult
+  matchAndRewrite(Operation *op, ArrayRef<Value *> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    auto llvmResultType = converter.convertType(operands[0]->getType()).cast<LLVM::LLVMType>();
+    auto llvmPointerType = llvmResultType.getStructElementType(0);
+
+    SmallVector<Value *, 3> newOperands;
+    for (int i = 0; i < 3; ++i) {
+      newOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
+          loc, llvmPointerType, operands[i],
+          rewriter.getIndexArrayAttr(0)));
+    }
+    Value *kernelFunctionOp = rewriter.create<U>(
+        loc, llvmPointerType, newOperands[0], newOperands[1], newOperands[2]);
+
+    rewriter.replaceOp(op, kernelFunctionOp);
+    return matchSuccess();
+  }
+
+  TypeConverter &converter;
+};
+
 namespace {
 struct LowerMIOpenHighToLowPass : public ModulePass<LowerMIOpenHighToLowPass> {
   void runOnModule() override;
@@ -80,12 +108,19 @@ void LowerMIOpenHighToLowPass::runOnModule() {
   // Convert to MIOpen low-level dialect using the converter defined above.
   OwningRewritePatternList patterns;
   LLVMTypeConverter typeConverter(&getContext());
-  patterns.insert<HighLevelDummyOpConversion>(&getContext(), typeConverter);
+  patterns.insert<HighLevelDummyOpConversion,
+                  Conv2D_OpConversion<miopen::Conv2D_F32Op, miopen::Conv2D_F32_KernelFunctionOp>,
+                  Conv2D_OpConversion<miopen::Conv2D_F16Op, miopen::Conv2D_F16_KernelFunctionOp>,
+                  Conv2D_OpConversion<miopen::Conv2D_BF16Op, miopen::Conv2D_BF16_KernelFunctionOp>
+                 >(&getContext(), typeConverter);
   mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(), typeConverter);
 
   ConversionTarget target(getContext());
   target.addLegalDialect<LLVM::LLVMDialect>();
-  target.addLegalOp<miopen::LowLevelDummyOp>();
+  target.addLegalOp<miopen::LowLevelDummyOp,
+                    miopen::Conv2D_F32_KernelFunctionOp,
+                    miopen::Conv2D_F16_KernelFunctionOp,
+                    miopen::Conv2D_BF16_KernelFunctionOp>();
   target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
     return typeConverter.isSignatureLegal(op.getType());
   });
