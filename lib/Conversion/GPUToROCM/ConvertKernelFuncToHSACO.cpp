@@ -103,6 +103,12 @@ public:
       if (failed(translateGpuKernelToHSACOAnnotation(*llvmModule, function)))
         signalPassFailure();
     }
+
+    // dump the MLIR
+    if (getenv("MLIR_ROCM_DUMP_AFTER_CONV_GPU_KERNEL")) {
+      std::cerr << "MLIR - After call to convert GPU Kernel" << std::endl;
+      getModule().dump();
+    }
   }
 
 private:

@@ -83,40 +83,69 @@ extern "C" int32_t mhipStreamSynchronize(void *stream) {
 
 /// Helper functions for writing mlir example code
 
-// A struct that corresponds to how MLIR represents unknown-length 1d memrefs.
-struct memref_t {
-  float *values;
-  intptr_t length;
+// A struct that corresponds to how MLIR represents memrefs.
+template <typename T, int N>
+struct MemRefType {
+  T *data;
+  int64_t offset;
+  int64_t sizes[N];
+  int64_t strides[N];
 };
 
-// Allows to register a pointer with the CUDA runtime. Helpful until
-// we have transfer functions implemented.
-extern "C" void mhipMemHostRegister(const memref_t arg, int32_t flags) {
+// Allows to register a pointer with the HIP runtime.
+// Helpful until we have transfer functions implemented.
+extern "C" void mhipHostRegisterMemRef(MemRefType<float, 1> *arg,
+                                       int32_t flags) {
+
   reportErrorIfAny(
-      hipHostRegister(arg.values, arg.length * sizeof(float), flags),
-      "MemHostRegister");
+      hipHostRegister(arg->data, arg->sizes[0] * sizeof(float), flags),
+      "hipHostRegister");
+
+  return;
 }
 
-extern "C" memref_t mhipHostGetDevicePointer(const memref_t arg,
-                                             int32_t flags) {
+extern "C" MemRefType<float, 1>
+mhipHostGetDevicePointerMemRef(MemRefType<float, 1> *arg, int32_t flags) {
 
-  float *device_ptr = nullptr;
+  MemRefType<float, 1> result(*arg);
+
   reportErrorIfAny(hipSetDevice(0), "hipSetDevice");
+
   reportErrorIfAny(
-      hipHostGetDevicePointer((void **)&device_ptr, arg.values, flags),
+      hipHostGetDevicePointer((void **)&result.data, arg->data, flags),
       "hipHostGetDevicePointer");
-  return {device_ptr, arg.length};
+
+  return result;
 }
 
-/// Prints the given float array to stderr.
-extern "C" void mhipPrintFloat(const memref_t arg) {
-  if (arg.length == 0) {
+// Allows to register a pointer with the HIP runtime.
+// Helpful until we have transfer functions implemented.
+extern "C" void mhipHostRegisterPointer(void *arg, int32_t flags) {
+  reportErrorIfAny(hipHostRegister(arg, sizeof(void*), flags),
+                   "hipHostRegister");
+}
+
+// Get the device pointer corresponding to the given registered pointer
+extern "C" void *mhipHostGetDevicePointer(void *arg, int32_t flags) {
+
+  reportErrorIfAny(hipSetDevice(0), "hipSetDevice");
+
+  void *result = nullptr;
+  reportErrorIfAny(hipHostGetDevicePointer((void **)&result, arg, flags),
+                   "hipHostGetDevicePointer");
+
+  return result;
+}
+
+/// Prints the given memref
+extern "C" void mhipPrintMemRef(const MemRefType<float, 1> *arg) {
+  if (arg->sizes[0] == 0) {
     llvm::outs() << "[]\n";
     return;
   }
-  llvm::outs() << "[" << arg.values[0];
-  for (int pos = 1; pos < arg.length; pos++) {
-    llvm::outs() << ", " << arg.values[pos];
+  llvm::outs() << "[" << arg->data[0];
+  for (int pos = 1; pos < arg->sizes[0]; pos++) {
+    llvm::outs() << ", " << arg->data[pos];
   }
   llvm::outs() << "]\n";
 }
