@@ -34,6 +34,8 @@
 
 #include "llvm/ADT/STLExtras.h"
 
+#include <iostream>
+
 namespace mlir {
 namespace {
 
@@ -107,6 +109,12 @@ public:
           generate(func, hsacoBlob);
       }
       module.erase();
+    }
+
+    // dump the MLIR
+    if (getenv("MLIR_ROCM_DUMP_AFTER_GEN_HSACO_GETTER")) {
+      std::cerr << "MLIR - After call to generate HSACO getters" << std::endl;
+      getModule().dump();
     }
   }
 

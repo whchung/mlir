@@ -41,16 +41,21 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <iostream>
+
 using namespace mlir;
 
 // To avoid name mangling, these are defined in the mini-runtime file.
 static constexpr const char *hipModuleLoadName = "mhipModuleLoad";
 static constexpr const char *hipModuleGetFunctionName = "mhipModuleGetFunction";
-static constexpr const char *hipLaunchKernelName = "mhipLaunchKernel";
 static constexpr const char *hipGetStreamHelperName = "mhipGetStreamHelper";
+static constexpr const char *hipLaunchKernelName = "mhipLaunchKernel";
 static constexpr const char *hipStreamSynchronizeName = "mhipStreamSynchronize";
 
-static constexpr const char *kHSACOGetterAnnotation = "amdgpu.hsacogetter";
+static constexpr const char *hipHostRegisterPointerName =
+    "mhipHostRegisterPointer";
+static constexpr const char *hipHostGetDevicePointerName =
+    "mhipHostGetDevicePointer";
 
 namespace {
 
@@ -110,6 +115,8 @@ private:
 
   // Allocate a void pointer on the stack.
   Value *allocatePointer(OpBuilder &builder, Location loc) {
+    // %18 = llvm.mlir.constant(1 : i32) : !llvm.i32
+    // %19 = llvm.alloca %18 x !llvm<"i8*"> : (!llvm.i32) -> !llvm<"i8**">
     auto one = builder.create<LLVM::ConstantOp>(loc, getInt32Type(),
                                                 builder.getI32IntegerAttr(1));
     return builder.create<LLVM::AllocaOp>(loc, getPointerPointerType(), one,
@@ -125,6 +132,7 @@ private:
 public:
   // Run the dialect converter on the module.
   void runOnModule() override {
+
     // Cache the LLVMDialect for the current module.
     llvmDialect = getContext().getRegisteredDialect<LLVM::LLVMDialect>();
     // Cache the used LLVM types.
@@ -133,6 +141,13 @@ public:
     for (auto func : getModule().getOps<FuncOp>()) {
       func.walk(
           [this](mlir::gpu::LaunchFuncOp op) { translateGpuLaunchCalls(op); });
+    }
+
+    // dump MLIR
+    if (getenv("MLIR_ROCM_DUMP_AFTER_CONV_GPU_LAUNCH_FUNC")) {
+      std::cerr << "MLIR - After call to convert GPU Launch Func HIP call(s)"
+                << std::endl;
+      getModule().dump();
     }
   }
 
@@ -155,38 +170,38 @@ void GpuLaunchFuncToHIPCallsPass::declareHIPFunctions(Location loc) {
   ModuleOp module = getModule();
   Builder builder(module);
   if (!module.lookupSymbol<FuncOp>(hipModuleLoadName)) {
-    module.push_back(
-        FuncOp::create(loc, hipModuleLoadName,
-                       builder.getFunctionType(
-                           {
-                               getPointerPointerType(), /* CUmodule *module */
-                               getPointerType()         /* void *HSACO */
-                           },
-                           getHIPResultType())));
+    module.push_back(FuncOp::create(
+        loc, hipModuleLoadName,
+        builder.getFunctionType(
+            {
+                getPointerPointerType(), /* hipModule_t *module */
+                getPointerType()         /* void *HSACO */
+            },
+            getHIPResultType())));
   }
   if (!module.lookupSymbol<FuncOp>(hipModuleGetFunctionName)) {
-    // The helper uses void* instead of HIP's opaque CUmodule and
-    // CUfunction.
-    module.push_back(
-        FuncOp::create(loc, hipModuleGetFunctionName,
-                       builder.getFunctionType(
-                           {
-                               getPointerPointerType(), /* void **function */
-                               getPointerType(),        /* void *module */
-                               getPointerType()         /* char *name */
-                           },
-                           getHIPResultType())));
+    // The helper uses void* instead of HIP's opaque hipModule_t and
+    // hipFunction_t.
+    module.push_back(FuncOp::create(
+        loc, hipModuleGetFunctionName,
+        builder.getFunctionType(
+            {
+                getPointerPointerType(), /* hipFunction_t *function */
+                getPointerType(),        /* hipModule_t module */
+                getPointerType()         /* char *name */
+            },
+            getHIPResultType())));
   }
   if (!module.lookupSymbol<FuncOp>(hipLaunchKernelName)) {
     // Other than the HIP api, the wrappers use uintptr_t to match the
     // LLVM type if MLIR's index type, which the GPU dialect uses.
-    // Furthermore, they use void* instead of HIP's opaque CUfunction and
-    // CUstream.
+    // Furthermore, they use void* instead of HIP's opaque hipFunction_t and
+    // hipStream_t.
     module.push_back(FuncOp::create(
         loc, hipLaunchKernelName,
         builder.getFunctionType(
             {
-                getPointerType(),        /* void* f */
+                getPointerType(),        /* hipFunction_t f */
                 getIntPtrType(),         /* intptr_t gridXDim */
                 getIntPtrType(),         /* intptr_t gridyDim */
                 getIntPtrType(),         /* intptr_t gridZDim */
@@ -194,7 +209,7 @@ void GpuLaunchFuncToHIPCallsPass::declareHIPFunctions(Location loc) {
                 getIntPtrType(),         /* intptr_t blockYDim */
                 getIntPtrType(),         /* intptr_t blockZDim */
                 getInt32Type(),          /* unsigned int sharedMemBytes */
-                getPointerType(),        /* void *hstream */
+                getPointerType(),        /* hipStream_t stream */
                 getPointerPointerType(), /* void **kernelParams */
                 getPointerPointerType()  /* void **extra */
             },
@@ -202,19 +217,37 @@ void GpuLaunchFuncToHIPCallsPass::declareHIPFunctions(Location loc) {
   }
   if (!module.lookupSymbol<FuncOp>(hipGetStreamHelperName)) {
     // Helper function to get the current HIP stream. Uses void* instead of
-    // HIPs opaque CUstream.
+    // HIPs opaque hipStream_t.
     module.push_back(FuncOp::create(
         loc, hipGetStreamHelperName,
-        builder.getFunctionType({}, getPointerType() /* void *stream */)));
+        builder.getFunctionType({}, getPointerType() /* hipStream_t */)));
   }
   if (!module.lookupSymbol<FuncOp>(hipStreamSynchronizeName)) {
     module.push_back(
         FuncOp::create(loc, hipStreamSynchronizeName,
                        builder.getFunctionType(
                            {
-                               getPointerType() /* CUstream stream */
+                               getPointerType() /* hipStream_t stream */
                            },
                            getHIPResultType())));
+  }
+  if (!module.lookupSymbol<FuncOp>(hipHostRegisterPointerName)) {
+    module.push_back(FuncOp::create(loc, hipHostRegisterPointerName,
+                                    builder.getFunctionType(
+                                        {
+                                            getPointerType(), /* void *ptr */
+                                            getInt32Type()    /* int32 flags*/
+                                        },
+                                        {})));
+  }
+  if (!module.lookupSymbol<FuncOp>(hipHostGetDevicePointerName)) {
+    module.push_back(FuncOp::create(loc, hipHostGetDevicePointerName,
+                                    builder.getFunctionType(
+                                        {
+                                            getPointerType(), /* void *ptr */
+                                            getInt32Type()    /* int32 flags*/
+                                        },
+                                        getPointerType())));
   }
 }
 
@@ -228,6 +261,7 @@ void GpuLaunchFuncToHIPCallsPass::declareHIPFunctions(Location loc) {
 // return %array
 Value *GpuLaunchFuncToHIPCallsPass::setupParamsArray(gpu::LaunchFuncOp launchOp,
                                                      OpBuilder &builder) {
+  auto numKernelOperands = launchOp.getNumKernelOperands();
   Location loc = launchOp.getLoc();
   auto one = builder.create<LLVM::ConstantOp>(loc, getInt32Type(),
                                               builder.getI32IntegerAttr(1));
@@ -236,14 +270,45 @@ Value *GpuLaunchFuncToHIPCallsPass::setupParamsArray(gpu::LaunchFuncOp launchOp,
       builder.getI32IntegerAttr(launchOp.getNumKernelOperands()));
   auto array = builder.create<LLVM::AllocaOp>(loc, getPointerPointerType(),
                                               arraySize, /*alignment=*/0);
-  for (int idx = 0, e = launchOp.getNumKernelOperands(); idx < e; ++idx) {
+  for (unsigned int idx = 0; idx < numKernelOperands; ++idx) {
     auto operand = launchOp.getKernelOperand(idx);
     auto llvmType = operand->getType().cast<LLVM::LLVMType>();
-    auto memLocation = builder.create<LLVM::AllocaOp>(
-        loc, llvmType.getPointerTo(), one, /*alignment=*/1);
+    Value *memLocation = builder.create<LLVM::AllocaOp>(
+        loc, llvmType.getPointerTo(), one, /*alignment=*/0);
     builder.create<LLVM::StoreOp>(loc, operand, memLocation);
     auto casted =
         builder.create<LLVM::BitcastOp>(loc, getPointerType(), memLocation);
+
+    // Assume all struct arguments come from MemRef. If this assumption does not
+    // hold anymore then we `launchOp` to lower from MemRefType and not after
+    // LLVMConversion has taken place and the MemRef information is lost.
+    // Extra level of indirection in the `array`:
+    //   the descriptor pointer is registered via @mhipHostRegister
+    //   and translated to a device pointer via @mhipHostGetDevicePointer
+    if (llvmType.isStructTy()) {
+      auto registerFunc =
+          getModule().lookupSymbol<FuncOp>(hipHostRegisterPointerName);
+      auto zero = builder.create<LLVM::ConstantOp>(
+          loc, getInt32Type(), builder.getI32IntegerAttr(0));
+      builder.create<LLVM::CallOp>(loc, ArrayRef<Type>{},
+                                   builder.getSymbolRefAttr(registerFunc),
+                                   ArrayRef<Value *>{casted, zero});
+
+      auto getDevicePtrFunc =
+          getModule().lookupSymbol<FuncOp>(hipHostGetDevicePointerName);
+
+      auto devicePtr = builder.create<LLVM::CallOp>(
+          loc, ArrayRef<Type>{getPointerType()},
+          builder.getSymbolRefAttr(getDevicePtrFunc),
+          ArrayRef<Value *>{casted, zero});
+
+      Value *memLocation = builder.create<LLVM::AllocaOp>(
+          loc, getPointerPointerType(), one, /*alignment=*/0);
+      builder.create<LLVM::StoreOp>(loc, devicePtr.getResult(0), memLocation);
+      casted =
+          builder.create<LLVM::BitcastOp>(loc, getPointerType(), memLocation);
+    }
+
     auto index = builder.create<LLVM::ConstantOp>(
         loc, getInt32Type(), builder.getI32IntegerAttr(idx));
     auto gep = builder.create<LLVM::GEPOp>(loc, getPointerPointerType(), array,
@@ -284,18 +349,26 @@ Value *GpuLaunchFuncToHIPCallsPass::generateKernelNameConstant(
 // function is expected to return a pointer to the HSACO blob when invoked. With
 // these given, the generated code in essence is
 //
-// %0 = call %hsacogetter
-// %1 = alloca sizeof(void*)
-// call %mhipModuleLoad(%1, %0)
-// %2 = alloca sizeof(void*)
-// %3 = load %1
-// %4 = <see generateKernelNameConstant>
-// call %mhipModuleGetFunction(%2, %3, %4)
-// %5 = call %mhipGetStreamHelper()
-// %6 = load %2
-// %7 = <see setupParamsArray>
-// call %mhipLaunchKernel(%6, <launchOp operands 0..5>, 0, %5, %7, nullptr)
-// call %mhipStreamSynchronize(%5)
+//
+// %hsaco_blob = call %hsacogetter
+// %module_handle_addr = alloca sizeof(void*)
+// call %mhipModuleLoad(%module_handle_addr, %hsaco_blob)
+// %module_handle = load %module_handle_addr
+// %kernel_name = <see generateKernelNameConstant>
+// %function_handle_addr = alloca sizeof(void*)
+// call %mhipModuleGetFunction(%module_handle, %function_handle_addr,
+// %kernel_name)
+// %function_handle = load %function_handle_addr
+// %stream_handle = call %mhipGetStreamHelper()
+// %params_array = <see setupParamsArray>
+// call %mhipLaunchKernel(%function_handle,
+//                        <launchOp operands 0..5>,
+//                        0,
+//                        %stream_handle,
+//                        %params_array,
+//                        nullptr)
+// call %mhipStreamSynchronize(%stream_handle)
+//
 void GpuLaunchFuncToHIPCallsPass::translateGpuLaunchCalls(
     mlir::gpu::LaunchFuncOp launchOp) {
   OpBuilder builder(launchOp);
