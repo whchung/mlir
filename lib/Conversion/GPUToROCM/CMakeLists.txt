@@ -5,6 +5,7 @@ if(MLIR_ROCM_CONVERSIONS_ENABLED)
     ConvertKernelFuncToHSACO.cpp
     ConvertLaunchFuncToHIPCalls.cpp
     GenerateHSACOAccessors.cpp
+    MIOpenDriverPass.cpp
   )
   target_link_libraries(MLIRGPUtoROCMTransforms
     MLIRGPU
