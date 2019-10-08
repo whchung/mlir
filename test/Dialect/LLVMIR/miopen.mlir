@@ -56,6 +56,15 @@ func @miopen_op_dummy_high(%arg0 : memref<?xf32>) {
 #strided4D = (d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)
 
 func @miopen_op_conv2dex_f32(%arg0 : memref<?x?x?x?xf32, #strided4D>, %arg1 : memref<?x?x?x?xf32, #strided4D>, %arg2 : memref<?x?x?x?xf32, #strided4D>) {
-  miopen.conv2dex.f32(%arg0, %arg1, %arg2) { dilations = [4, 5], paddings = [0, 1], strides = [2, 3] } : memref<?x?x?x?xf32, #strided4D>, memref<?x?x?x?xf32, #strided4D>, memref<?x?x?x?xf32, #strided4D>
+  // %m0 : input
+  %m0 = memref_cast %arg0 : memref<?x?x?x?xf32, #strided4D> to memref<128x128x17x17xf32, #strided4D>
+  // %m1 : filter
+  %m1 = memref_cast %arg1 : memref<?x?x?x?xf32, #strided4D> to memref<128x128x3x3xf32, #strided4D>
+  // %m2 : output
+  %m2 = memref_cast %arg2 : memref<?x?x?x?xf32, #strided4D> to memref<128x128x?x?xf32, #strided4D>
+
+  // CHECK: miopen.conv2dex.f32(%{{.*}}, %{{.*}}, %{{.*}}) {dilations = [1, 1], paddings = [0, 0], strides = [2, 2]} : memref<128x128x17x17xf32, #{{.*}}>, memref<128x128x3x3xf32, #{{.*}}>, memref<128x128x?x?xf32, #{{.*}}>
+  // CHECK-NEXT: // MIOpenDriver conv -n 128 -c 128 -H 17 -W 17 -k 128 -y 3 -x 3 -u 2 -v 2 -p 0 -q 0 -l 1 -j 1 -F 1
+  miopen.conv2dex.f32(%m0, %m1, %m2) {dilations = [1, 1], paddings = [0, 0], strides = [2, 2]} : memref<128x128x17x17xf32, #strided4D>, memref<128x128x3x3xf32, #strided4D>, memref<128x128x?x?xf32, #strided4D>
   return
 }
