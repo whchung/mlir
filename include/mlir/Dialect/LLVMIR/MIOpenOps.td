@@ -55,6 +55,21 @@ def MIOpen_Conv2D_F32Op : MIOpen_Conv2DOp<"conv2d.f32", F32MemRef>;
 def MIOpen_Conv2D_F16Op : MIOpen_Conv2DOp<"conv2d.f16", F16MemRef>;
 def MIOpen_Conv2D_BF16Op : MIOpen_Conv2DOp<"conv2d.bf16", BF16MemRef>;
 
+class MIOpen_Conv2DExOp<string mnemonic, list<OpTrait> traits = []>:
+  MIOpen_HighLevelOp<mnemonic, traits>,
+  Arguments<(ins AnyStridedMemRefOfRank<4>: $input,
+                 AnyStridedMemRefOfRank<4>: $filter,
+                 AnyStridedMemRefOfRank<4>: $output,
+                 OptionalAttr<I64ArrayAttr>: $strides,
+                 OptionalAttr<I64ArrayAttr>: $paddings,
+                 OptionalAttr<I64ArrayAttr>: $dilations)> {
+
+  let parser = [{ return parseMIOpenConv2DExOp(parser, result); }];
+  let printer = [{ return printMIOpenConv2DExOp(p, this->getOperation()); }];
+}
+
+def MIOpen_Conv2DEx_F32Op : MIOpen_Conv2DExOp<"conv2dex.f32">;
+
 //===----------------------------------------------------------------------===//
 // Experimental high-level dummy op                                           //
 //===----------------------------------------------------------------------===//

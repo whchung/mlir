@@ -104,6 +104,29 @@ static ParseResult parseMIOpenConv2DOp(OpAsmParser &parser, OperationState &resu
   return parseMIOpenKernelFunctionOp(parser, result);
 }
 
+static void printMIOpenConv2DExOp(OpAsmPrinter &p, Operation *op) {
+  p << op->getName().getStringRef() << "(";
+  interleave(
+      op->getOperands().begin(), op->getOperands().end(),
+      [&](Value *v) { p << *v; }, [&]() { p << ", "; });
+  p << ")";
+  p.printOptionalAttrDict(op->getAttrs());
+  p << " : ";
+  interleave(
+      op->getOperands().begin(), op->getOperands().end(),
+      [&](Value *v) { p << v->getType(); }, [&]() { p << ", "; });
+}
+
+static ParseResult parseMIOpenConv2DExOp(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::OperandType, 3> ops;
+  SmallVector<Type, 3> types;
+  return failure(
+      parser.parseOperandList(ops, OpAsmParser::Delimiter::Paren) ||
+      parser.parseOptionalAttributeDict(result.attributes) ||
+      parser.parseColonTypeList(types) ||
+      parser.resolveOperands(ops, types, parser.getNameLoc(), result.operands));
+}
+
 //===----------------------------------------------------------------------===//
 // MIOpenDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//

@@ -50,5 +50,12 @@ func @miopen_op_conv2d_bf16(%arg0 : memref<?xbf16>, %arg1 : memref<?xbf16>, %arg
 func @miopen_op_dummy_high(%arg0 : memref<?xf32>) {
   // CHECK: miopen.dummy.high %{{.*}} : memref<?xf32>
   miopen.dummy.high %arg0 : memref<?xf32>
-  llvm.return
+  return
+}
+
+#strided4D = (d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)
+
+func @miopen_op_conv2dex_f32(%arg0 : memref<?x?x?x?xf32, #strided4D>, %arg1 : memref<?x?x?x?xf32, #strided4D>, %arg2 : memref<?x?x?x?xf32, #strided4D>) {
+  miopen.conv2dex.f32(%arg0, %arg1, %arg2) { dilations = [4, 5], paddings = [0, 1], strides = [2, 3] } : memref<?x?x?x?xf32, #strided4D>, memref<?x?x?x?xf32, #strided4D>, memref<?x?x?x?xf32, #strided4D>
+  return
 }
