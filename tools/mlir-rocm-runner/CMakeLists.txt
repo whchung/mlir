@@ -49,7 +49,6 @@ if(MLIR_ROCM_RUNNER_ENABLED)
 
   set(FULL_LINK_LIBS
     MLIRAffineOps
-    MLIRLoopToStandard
     MLIRGPU
     MLIRGPUtoROCMTransforms
     MLIRGPUtoROCDLTransforms
