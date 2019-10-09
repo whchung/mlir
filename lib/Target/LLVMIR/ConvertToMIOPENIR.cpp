@@ -82,21 +82,33 @@ static void createMIOpenKernelFunctionExCall(llvm::IRBuilder<> &builder,
                                              StringRef fn_name,
                                              ArrayRef<llvm::Value *> args,
                                              ArrayRef<Optional<StringRef>> attrs) {
-  // TBD
+  assert(attrs.size() == 2 && "MIOpen kernel function ex call must have 2 attributes: kernel_path, and kernel_name");
+  assert(args.size() == 3 && "MIOpen kernel function ex call must have 3 arguments: input, weight, output");
+
   llvm::Module *module = builder.GetInsertBlock()->getModule();
   std::vector<llvm::Type*> ArgTypes;
   ArgTypes.push_back(args[0]->getType());
   ArgTypes.push_back(args[1]->getType());
   ArgTypes.push_back(args[2]->getType());
 
+  StringRef kernel_name = fn_name;
+  if (attrs[1].hasValue()) {
+    kernel_name = attrs[1].getValue();
+  }
+
   llvm::FunctionType *fn_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(module->getContext()), // return type.
       ArgTypes, // parameter type.
       false);   // no variadic arguments.
   llvm::Function *fn = llvm::dyn_cast<llvm::Function>(
-      module->getOrInsertFunction(fn_name, fn_type).getCallee());
+      module->getOrInsertFunction(kernel_name, fn_type).getCallee());
 
-  builder.CreateCall(fn, args);
+  auto call_inst = builder.CreateCall(fn, args);
+
+  // add kernel_path metadata
+  llvm::LLVMContext &context = call_inst->getContext();
+  llvm::MDNode *mdNode = llvm::MDNode::get(context, llvm::MDString::get(context, attrs[0].getValue()));
+  call_inst->setMetadata("kernel_path", mdNode);
 }
 
 class ModuleTranslation : public LLVM::ModuleTranslation {

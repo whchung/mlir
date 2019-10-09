@@ -36,8 +36,9 @@ func @miopen_op_conv2d_kernel_bf16(%arg0 : !llvm<"i16*">, %arg1 : !llvm<"i16*">,
 // CHECK-LABEL: define void @miopen_op_conv2d_kernelex_f32(float* %{{.*}}, float* %{{.*}}, float* %{{.*}}) {
 func @miopen_op_conv2d_kernelex_f32(%arg0 : !llvm<"float*">, %arg1 : !llvm<"float*">, %arg2 : !llvm<"float*">) {
 
-  // CHECK: call void @conv2d.kernelex.f32(float* {{.*}}, float* {{.*}}, float* {{.*}})
-  miopen.conv2d.kernelex.f32 %arg0, %arg1, %arg2 { miopen_driver_command = "TBD", kernel_path = "TBD", kernel_name = "TBD" } : !llvm<"float*">, !llvm<"float*">, !llvm<"float*">
+  // CHECK: call void @kernel_name_f32(float* {{.*}}, float* {{.*}}, float* {{.*}}), !kernel_path !{{.*}}
+  // CHECK: !{{.*}} = !{!"some_kernel_path"}
+  miopen.conv2d.kernelex.f32 %arg0, %arg1, %arg2 { kernel_path = "some_kernel_path", kernel_name = "kernel_name_f32" } : !llvm<"float*">, !llvm<"float*">, !llvm<"float*">
   llvm.return
 }
 
