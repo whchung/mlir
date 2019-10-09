@@ -66,7 +66,6 @@ func @miopen_op_conv2dex_f32(%arg0 : memref<?x?x?x?xf32, #strided4D>, %arg1 : me
   %m2 = memref_cast %arg2 : memref<?x?x?x?xf32, #strided4D> to memref<128x128x?x?xf32, #strided4D>
 
   // CHECK: miopen.conv2dex.f32(%{{.*}}, %{{.*}}, %{{.*}}) {dilations = [1, 1], paddings = [0, 0], strides = [2, 2]} : memref<128x128x17x17xf32, #{{.*}}>, memref<128x128x3x3xf32, #{{.*}}>, memref<128x128x?x?xf32, #{{.*}}>
-  // CHECK-NEXT: // MIOpenDriver conv -n 128 -c 128 -H 17 -W 17 -k 128 -y 3 -x 3 -u 2 -v 2 -p 0 -q 0 -l 1 -j 1 -F 1
   miopen.conv2dex.f32(%m0, %m1, %m2) {dilations = [1, 1], paddings = [0, 0], strides = [2, 2]} : memref<128x128x17x17xf32, #strided4D>, memref<128x128x3x3xf32, #strided4D>, memref<128x128x?x?xf32, #strided4D>
   return
 }

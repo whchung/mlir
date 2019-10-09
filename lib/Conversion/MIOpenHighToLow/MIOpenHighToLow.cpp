@@ -98,6 +98,93 @@ struct Conv2D_OpConversion : public ConversionPattern {
   TypeConverter &converter;
 };
 
+static void buildMIOpenDriverCommand(llvm::raw_ostream &p, Operation *op) { 
+  if (auto memrefInputType = op->getOperand(0)->getType().dyn_cast<MemRefType>()) {
+    auto elementType = memrefInputType.getElementType();
+    if (auto floatElementType = elementType.dyn_cast<FloatType>()) {
+      switch (floatElementType.getWidth()) {
+        case 32:
+          p << "conv ";
+          break;
+        case 16:
+          p << "convfp16 ";
+          // TBD what about BF16?
+          break;
+      }
+    }
+
+    auto shape = memrefInputType.getShape();
+    p << "-n " << shape[0] << " ";
+    p << "-c " << shape[1] << " ";
+    p << "-H " << shape[2] << " ";
+    p << "-W " << shape[3] << " ";
+  }
+  if (auto memrefFilterType = op->getOperand(1)->getType().dyn_cast<MemRefType>()) {
+    auto shape = memrefFilterType.getShape();
+    p << "-k " << shape[0] << " ";
+    p << "-y " << shape[2] << " ";
+    p << "-x " << shape[3] << " ";
+  }
+
+  if (auto stridesAttr = op->getAttr("strides").dyn_cast<ArrayAttr>()) {
+    if (auto stridesXValue = stridesAttr.getValue()[0].dyn_cast<IntegerAttr>())
+      p << "-u " << stridesXValue.getInt() << " ";
+    if (auto stridesYValue = stridesAttr.getValue()[1].dyn_cast<IntegerAttr>())
+      p << "-v " << stridesYValue.getInt() << " ";
+  }
+  if (auto paddingsAttr = op->getAttr("paddings").dyn_cast<ArrayAttr>()) {
+    if (auto paddingsXValue = paddingsAttr.getValue()[0].dyn_cast<IntegerAttr>())
+      p << "-p " << paddingsXValue.getInt() << " ";
+    if (auto paddingsYValue = paddingsAttr.getValue()[1].dyn_cast<IntegerAttr>())
+      p << "-q " << paddingsYValue.getInt() << " ";
+  }
+  if (auto dilationsAttr = op->getAttr("dilations").dyn_cast<ArrayAttr>()) {
+    if (auto dilationsXValue = dilationsAttr.getValue()[0].dyn_cast<IntegerAttr>())
+      p << "-l " << dilationsXValue.getInt() << " ";
+    if (auto dilationsYValue = dilationsAttr.getValue()[1].dyn_cast<IntegerAttr>())
+      p << "-j " << dilationsYValue.getInt() << " ";
+  }
+
+  // fwd only for now
+  p << "-F 1";
+}
+
+struct Conv2DEx_OpConversion : public ConversionPattern {
+  explicit Conv2DEx_OpConversion(MLIRContext *context, TypeConverter &converter)
+      : ConversionPattern(miopen::Conv2DEx_F32Op::getOperationName(), 1, context),
+        converter(converter) {}
+
+  PatternMatchResult
+  matchAndRewrite(Operation *op, ArrayRef<Value *> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    auto llvmResultType = converter.convertType(operands[0]->getType()).cast<LLVM::LLVMType>();
+    auto llvmPointerType = llvmResultType.getStructElementType(0);
+
+    SmallVector<Value *, 3> newOperands;
+    for (int i = 0; i < 3; ++i) {
+      newOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
+          loc, llvmPointerType, operands[i],
+          rewriter.getIndexArrayAttr(0)));
+    }
+
+    // build MIOpenDriver command attribute
+    std::string miopenDriverCommand;
+    llvm::raw_string_ostream os(miopenDriverCommand);
+    buildMIOpenDriverCommand(os, op);
+    StringAttr miopenDriverCommandAttr = StringAttr::get(os.str(), op->getContext());
+    StringAttr kernelPathAttr = StringAttr::get("some_where", op->getContext());
+    StringAttr kernelNameAttr = StringAttr::get("some_name", op->getContext());
+
+    rewriter.create<miopen::Conv2D_F32_KernelFunctionExOp>(
+        loc, newOperands[0], newOperands[1], newOperands[2], miopenDriverCommandAttr, kernelPathAttr, kernelNameAttr);
+    op->erase();
+    return matchSuccess();
+  }
+
+  TypeConverter &converter;
+};
+
 namespace {
 struct LowerMIOpenHighToLowPass : public ModulePass<LowerMIOpenHighToLowPass> {
   void runOnModule() override;
@@ -111,7 +198,8 @@ void LowerMIOpenHighToLowPass::runOnModule() {
   patterns.insert<HighLevelDummyOpConversion,
                   Conv2D_OpConversion<miopen::Conv2D_F32Op, miopen::Conv2D_F32_KernelFunctionOp>,
                   Conv2D_OpConversion<miopen::Conv2D_F16Op, miopen::Conv2D_F16_KernelFunctionOp>,
-                  Conv2D_OpConversion<miopen::Conv2D_BF16Op, miopen::Conv2D_BF16_KernelFunctionOp>
+                  Conv2D_OpConversion<miopen::Conv2D_BF16Op, miopen::Conv2D_BF16_KernelFunctionOp>,
+                  Conv2DEx_OpConversion
                  >(&getContext(), typeConverter);
   mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(), typeConverter);
 
@@ -120,7 +208,8 @@ void LowerMIOpenHighToLowPass::runOnModule() {
   target.addLegalOp<miopen::LowLevelDummyOp,
                     miopen::Conv2D_F32_KernelFunctionOp,
                     miopen::Conv2D_F16_KernelFunctionOp,
-                    miopen::Conv2D_BF16_KernelFunctionOp>();
+                    miopen::Conv2D_BF16_KernelFunctionOp,
+                    miopen::Conv2D_F32_KernelFunctionExOp>();
   target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
     return typeConverter.isSignatureLegal(op.getType());
   });

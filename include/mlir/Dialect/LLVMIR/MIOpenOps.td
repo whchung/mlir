@@ -57,9 +57,12 @@ def MIOpen_Conv2D_BF16Op : MIOpen_Conv2DOp<"conv2d.bf16", BF16MemRef>;
 
 class MIOpen_Conv2DExOp<string mnemonic, list<OpTrait> traits = []>:
   MIOpen_HighLevelOp<mnemonic, traits>,
-  Arguments<(ins AnyStridedMemRefOfRank<4>: $input,
-                 AnyStridedMemRefOfRank<4>: $filter,
-                 AnyStridedMemRefOfRank<4>: $output,
+  //Arguments<(ins AnyStridedMemRefOfRank<4>: $input,
+  //               AnyStridedMemRefOfRank<4>: $filter,
+  //               AnyStridedMemRefOfRank<4>: $output,
+  Arguments<(ins AnyType: $input,
+                 AnyType: $filter,
+                 AnyType: $output,
                  OptionalAttr<I64ArrayAttr>: $strides,
                  OptionalAttr<I64ArrayAttr>: $paddings,
                  OptionalAttr<I64ArrayAttr>: $dilations)> {

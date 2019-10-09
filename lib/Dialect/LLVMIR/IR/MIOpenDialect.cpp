@@ -106,59 +106,6 @@ static ParseResult parseMIOpenConv2DOp(OpAsmParser &parser, OperationState &resu
 
 //// routines for MIOpen Conv2DEx ops
 
-static void testPrintMIOpenDriverCommand(OpAsmPrinter &p, Operation *op) { 
-  p << "\n// MIOpenDriver ";
-
-  if (auto memrefInputType = op->getOperand(0)->getType().dyn_cast<MemRefType>()) {
-    auto elementType = memrefInputType.getElementType();
-    if (auto floatElementType = elementType.dyn_cast<FloatType>()) {
-      switch (floatElementType.getWidth()) {
-        case 32:
-          p << "conv ";
-          break;
-        case 16:
-          p << "convfp16 ";
-          // TBD what about BF16?
-          break;
-      }
-    }
-
-    auto shape = memrefInputType.getShape();
-    p << "-n " << shape[0] << " ";
-    p << "-c " << shape[1] << " ";
-    p << "-H " << shape[2] << " ";
-    p << "-W " << shape[3] << " ";
-  }
-  if (auto memrefFilterType = op->getOperand(1)->getType().dyn_cast<MemRefType>()) {
-    auto shape = memrefFilterType.getShape();
-    p << "-k " << shape[0] << " ";
-    p << "-y " << shape[2] << " ";
-    p << "-x " << shape[3] << " ";
-  }
-
-  if (auto stridesAttr = op->getAttr("strides").dyn_cast<ArrayAttr>()) {
-    if (auto stridesXValue = stridesAttr.getValue()[0].dyn_cast<IntegerAttr>())
-      p << "-u " << stridesXValue.getInt() << " ";
-    if (auto stridesYValue = stridesAttr.getValue()[1].dyn_cast<IntegerAttr>())
-      p << "-v " << stridesYValue.getInt() << " ";
-  }
-  if (auto paddingsAttr = op->getAttr("paddings").dyn_cast<ArrayAttr>()) {
-    if (auto paddingsXValue = paddingsAttr.getValue()[0].dyn_cast<IntegerAttr>())
-      p << "-p " << paddingsXValue.getInt() << " ";
-    if (auto paddingsYValue = paddingsAttr.getValue()[1].dyn_cast<IntegerAttr>())
-      p << "-q " << paddingsYValue.getInt() << " ";
-  }
-  if (auto dilationsAttr = op->getAttr("dilations").dyn_cast<ArrayAttr>()) {
-    if (auto dilationsXValue = dilationsAttr.getValue()[0].dyn_cast<IntegerAttr>())
-      p << "-l " << dilationsXValue.getInt() << " ";
-    if (auto dilationsYValue = dilationsAttr.getValue()[1].dyn_cast<IntegerAttr>())
-      p << "-j " << dilationsYValue.getInt() << " ";
-  }
-
-  // fwd only for now
-  p << "-F 1";
-}
-
 static void printMIOpenConv2DExOp(OpAsmPrinter &p, Operation *op) {
   p << op->getName().getStringRef() << "(";
   interleave(
@@ -170,8 +117,6 @@ static void printMIOpenConv2DExOp(OpAsmPrinter &p, Operation *op) {
   interleave(
       op->getOperands().begin(), op->getOperands().end(),
       [&](Value *v) { p << v->getType(); }, [&]() { p << ", "; });
-
-  testPrintMIOpenDriverCommand(p, op);
 }
 
 static ParseResult parseMIOpenConv2DExOp(OpAsmParser &parser, OperationState &result) {
@@ -195,8 +140,6 @@ static void printMIOpenKernelFunctionExOp(OpAsmPrinter &p, Operation *op) {
   interleave(
       op->getOperands().begin(), op->getOperands().end(),
       [&](Value *v) { p << v->getType(); }, [&]() { p << ", "; });
-
-  //testPrintMIOpenDriverCommand(p, op);
 }
 
 static ParseResult parseMIOpenKernelFunctionExOp(OpAsmParser &parser, OperationState &result) {

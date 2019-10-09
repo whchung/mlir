@@ -29,3 +29,9 @@ func @foo(%arg0: memref<16xf32>) {
   miopen.dummy.high %arg0 : memref<16xf32>
   return
 }
+
+func @miopen_conv2dex_f32(%arg0: memref<128x128x17x17xf32>, %arg1: memref<128x128x3x3xf32>, %arg2: memref<128x128x?x?xf32>) {
+  miopen.conv2dex.f32(%arg0, %arg1, %arg2) {dilations=[1,1], paddings=[0,0], strides=[3,3]}: memref<128x128x17x17xf32>, memref<128x128x3x3xf32>, memref<128x128x?x?xf32>
+  return
+}
+
