@@ -78,6 +78,27 @@ static llvm::Value *createMIOpenKernelFunctionCall(llvm::IRBuilder<> &builder,
   return builder.CreateCall(fn, args);
 }
 
+static void createMIOpenKernelFunctionExCall(llvm::IRBuilder<> &builder,
+                                             StringRef fn_name,
+                                             ArrayRef<llvm::Value *> args,
+                                             ArrayRef<Optional<StringRef>> attrs) {
+  // TBD
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  std::vector<llvm::Type*> ArgTypes;
+  ArgTypes.push_back(args[0]->getType());
+  ArgTypes.push_back(args[1]->getType());
+  ArgTypes.push_back(args[2]->getType());
+
+  llvm::FunctionType *fn_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(module->getContext()), // return type.
+      ArgTypes, // parameter type.
+      false);   // no variadic arguments.
+  llvm::Function *fn = llvm::dyn_cast<llvm::Function>(
+      module->getOrInsertFunction(fn_name, fn_type).getCallee());
+
+  builder.CreateCall(fn, args);
+}
+
 class ModuleTranslation : public LLVM::ModuleTranslation {
 
 public:

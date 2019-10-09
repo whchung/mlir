@@ -53,6 +53,8 @@ func @miopen_op_dummy_high(%arg0 : memref<?xf32>) {
   return
 }
 
+// Test for MIOpen high-level ops with more attributes and data
+
 #strided4D = (d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)
 
 func @miopen_op_conv2dex_f32(%arg0 : memref<?x?x?x?xf32, #strided4D>, %arg1 : memref<?x?x?x?xf32, #strided4D>, %arg2 : memref<?x?x?x?xf32, #strided4D>) {
@@ -68,3 +70,12 @@ func @miopen_op_conv2dex_f32(%arg0 : memref<?x?x?x?xf32, #strided4D>, %arg1 : me
   miopen.conv2dex.f32(%m0, %m1, %m2) {dilations = [1, 1], paddings = [0, 0], strides = [2, 2]} : memref<128x128x17x17xf32, #strided4D>, memref<128x128x3x3xf32, #strided4D>, memref<128x128x?x?xf32, #strided4D>
   return
 }
+
+// Test for MIOpen low-level ops with more attributes and data
+
+func @miopen_op_conv2d_kernelex_f32(%arg0 : !llvm<"float*">, %arg1 : !llvm<"float*">, %arg2 : !llvm<"float*">) {
+  // CHECK: miopen.conv2d.kernelex.f32 %{{.*}}, %{{.*}}, %{{.*}}
+  miopen.conv2d.kernelex.f32 %arg0, %arg1, %arg2 { miopen_driver_command = "TBD", kernel_path = "TBD", kernel_name = "TBD" } : !llvm<"float*">, !llvm<"float*">, !llvm<"float*">
+  llvm.return
+}
+

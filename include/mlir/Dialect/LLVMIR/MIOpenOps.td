@@ -109,6 +109,21 @@ def MIOpen_Conv2D_F32_KernelFunctionOp : MIOpen_KernelFunctionOp<"conv2d.kernel.
 def MIOpen_Conv2D_F16_KernelFunctionOp : MIOpen_KernelFunctionOp<"conv2d.kernel.f16", "miopen_conv2d_f16_kernel">;
 def MIOpen_Conv2D_BF16_KernelFunctionOp : MIOpen_KernelFunctionOp<"conv2d.kernel.bf16", "miopen_conv2d_bf16_kernel">;
 
+class MIOpen_KernelFunctionExOp<string mnemonic, list<OpTrait> traits = []> :
+  MIOpen_LowLevelOp<mnemonic, traits>,
+  Arguments<(ins LLVM_Type:$input, LLVM_Type:$output, LLVM_Type:$weight,
+                 OptionalAttr<StrAttr>: $miopenDriverCommand,
+                 OptionalAttr<StrAttr>: $kernelPath,
+                 OptionalAttr<StrAttr>: $kernelName)> {
+
+  let parser = [{ return parseMIOpenKernelFunctionExOp(parser, result); }];
+  let printer = [{ printMIOpenKernelFunctionExOp(p, this->getOperation()); }];
+
+  string llvmBuilder = "createMIOpenKernelFunctionExCall(builder, \""# mnemonic # "\", {$input, $output, $weight}, {$miopenDriverCommand, $kernelPath, $kernelName});";
+}
+
+def MIOpen_Conv2D_F32_KernelFunctionExOp : MIOpen_KernelFunctionExOp<"conv2d.kernelex.f32">;
+
 //===----------------------------------------------------------------------===//
 // Experimental low-level dummy op                                            //
 //===----------------------------------------------------------------------===//
