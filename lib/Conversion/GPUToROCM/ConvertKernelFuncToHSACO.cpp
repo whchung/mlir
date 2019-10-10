@@ -236,29 +236,22 @@ void LinkWithBitcodeModules(
   }
 }
 
-// Returns whether the module uses any ROCDL bitcode functions. This function
-// may have false positives
-bool CouldNeedDeviceBitcode(const llvm::Module &llvmModule) {
-  for (const llvm::Function &llvmFunction : llvmModule.functions()) {
-    // This is a conservative approximation
-    //  - not all such functions are in ROCm-Device-Libs.
-    if (!llvmFunction.isIntrinsic() && llvmFunction.isDeclaration()) {
-      return true;
-    }
-  }
-  return false;
+static void BuildExternalDeviceBitcodePaths(const llvm::Module &llvmModule, std::vector<std::string> &result) {
+  for (const llvm::Function &llvmFunction : llvmModule.functions())
+    for (const llvm::BasicBlock &llvmBB : llvmFunction.getBasicBlockList())
+      for (const llvm::Instruction &llvmInst : llvmBB.instructionsWithoutDebug())
+        if (const llvm::MDNode *mdNode = llvmInst.getMetadata("kernel_path"))
+          if (auto mdStr = dyn_cast<llvm::MDString>(mdNode->getOperand(0).get()))
+            result.push_back(mdStr->getString().str());
 }
 
 // Links ROCm-Device-Libs into the given module if the module needs it.
-void LinkROCDLIfNecessary(llvm::Module &llvmModule,
-                          rocm::AMDGPUVersion amdgpuVersion,
-                          const std::string &rocdlDir) {
-
-  if (!CouldNeedDeviceBitcode(llvmModule)) {
-    return;
-  }
-
-  LinkWithBitcodeModules(llvmModule, GetROCDLPaths(amdgpuVersion, rocdlDir));
+void LinkROCDLAndExternalBitcodes(llvm::Module &llvmModule,
+                                  rocm::AMDGPUVersion amdgpuVersion,
+                                  const std::string &rocdlDir) {
+  std::vector<std::string> bitcodePaths = GetROCDLPaths(amdgpuVersion, rocdlDir);
+  BuildExternalDeviceBitcodePaths(llvmModule, bitcodePaths);
+  LinkWithBitcodeModules(llvmModule, bitcodePaths);
 }
 
 } // anonymous namespace
@@ -371,7 +364,7 @@ OwnedHSACO GpuKernelToHSACOPass::convertModuleToHSACO(llvm::Module &llvmModule,
   // Set the data layout of the llvm module to match what the target needs.
   llvmModule.setDataLayout(targetMachine->createDataLayout());
 
-  LinkROCDLIfNecessary(llvmModule, config.amdgpuVersion, config.rocdlDir);
+  LinkROCDLAndExternalBitcodes(llvmModule, config.amdgpuVersion, config.rocdlDir);
 
   // Lower LLVM module to HSA code object
   return emitModuleToHSACO(llvmModule, *targetMachine);
