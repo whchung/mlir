@@ -147,6 +147,12 @@ static void buildMIOpenDriverCommand(llvm::raw_ostream &p, Operation *op) {
 
   // fwd only for now
   p << "-F 1";
+
+  // do not verify
+  p << "-V 0";
+
+  // request kernel_path and kernel_name output
+  //p << "-O 1";
 }
 
 struct Conv2DEx_OpConversion : public ConversionPattern {
