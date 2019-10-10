@@ -21,9 +21,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/ROCDLIR.h"
+#include "mlir/Target/MIOPENIR.h"
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/LLVMIR/MIOpenDialect.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
@@ -38,6 +40,80 @@
 using namespace mlir;
 
 namespace {
+
+static llvm::Value *createMIOpenDummyCall(llvm::IRBuilder<> &builder,
+                                          StringRef fn_name,
+                                          ArrayRef<llvm::Value *> args) {
+  assert(args.size() == 1 && "MIOpen dummy op call must take 1 argument");
+
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  std::vector<llvm::Type*> ArgTypes;
+  ArgTypes.push_back(args[0]->getType());
+
+  llvm::FunctionType *fn_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(module->getContext()), // return type.
+      ArgTypes, // parameter type.
+      false);   // no variadic arguments.
+  llvm::Function *fn = llvm::dyn_cast<llvm::Function>(
+      module->getOrInsertFunction(fn_name, fn_type).getCallee());
+
+  return builder.CreateCall(fn, args);
+}
+
+static llvm::Value *createMIOpenKernelFunctionCall(llvm::IRBuilder<> &builder,
+                                                   StringRef fn_name,
+                                                   ArrayRef<llvm::Value *> args) {
+  assert(args.size() == 3 && "MIOpen kernel function call must take 3 arguments");
+
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  std::vector<llvm::Type*> ArgTypes;
+  ArgTypes.push_back(args[0]->getType());
+  ArgTypes.push_back(args[1]->getType());
+  ArgTypes.push_back(args[2]->getType());
+
+  llvm::FunctionType *fn_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(module->getContext()), // return type.
+      ArgTypes, // parameter type.
+      false);   // no variadic arguments.
+  llvm::Function *fn = llvm::dyn_cast<llvm::Function>(
+      module->getOrInsertFunction(fn_name, fn_type).getCallee());
+
+  return builder.CreateCall(fn, args);
+}
+
+static void createMIOpenKernelFunctionExCall(llvm::IRBuilder<> &builder,
+                                             StringRef fn_name,
+                                             ArrayRef<llvm::Value *> args,
+                                             ArrayRef<Optional<StringRef>> attrs) {
+  assert(attrs.size() == 2 && "MIOpen kernel function ex call must have 2 attributes: kernel_path, and kernel_name");
+  assert(args.size() == 3 && "MIOpen kernel function ex call must have 3 arguments: input, weight, output");
+
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  std::vector<llvm::Type*> ArgTypes;
+  ArgTypes.push_back(args[0]->getType());
+  ArgTypes.push_back(args[1]->getType());
+  ArgTypes.push_back(args[2]->getType());
+
+  StringRef kernel_name = fn_name;
+  if (attrs[1].hasValue()) {
+    kernel_name = attrs[1].getValue();
+  }
+
+  llvm::FunctionType *fn_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(module->getContext()), // return type.
+      ArgTypes, // parameter type.
+      false);   // no variadic arguments.
+  llvm::Function *fn = llvm::dyn_cast<llvm::Function>(
+      module->getOrInsertFunction(kernel_name, fn_type).getCallee());
+
+  auto call_inst = builder.CreateCall(fn, args);
+
+  // add kernel_path metadata
+  llvm::LLVMContext &context = call_inst->getContext();
+  llvm::MDNode *mdNode = llvm::MDNode::get(context, llvm::MDString::get(context, attrs[0].getValue()));
+  call_inst->setMetadata("kernel_path", mdNode);
+}
+
 // Create a call to llvm intrisic
 static llvm::Value *createIntrinsicCall(llvm::IRBuilder<> &builder,
                                         llvm::Intrinsic::ID intrinsic,
@@ -77,6 +153,7 @@ protected:
                                  llvm::IRBuilder<> &builder) override {
 
 #include "mlir/Dialect/LLVMIR/ROCDLConversions.inc"
+#include "mlir/Dialect/LLVMIR/MIOpenConversions.inc"
 
     return LLVM::ModuleTranslation::convertOperation(opInst, builder);
   }

@@ -40,6 +40,7 @@ target_link_libraries(MLIRTargetROCDLIR
   MLIRGPU
   MLIRIR
   MLIRROCDLIR
+  MLIRMIOPENIR
   MLIRTargetLLVMIRModuleTranslation
   )
 add_llvm_library(MLIRTargetMIOPENIR
