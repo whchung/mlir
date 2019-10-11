@@ -37,6 +37,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
@@ -90,13 +91,40 @@ LogicalResult MIOpenDriverPass::invokeMIOpenDriverPerFunction(
       }
 
       std::string errorMessage;
-      llvm::Optional<llvm::StringRef> redirects[] = { llvm::None, llvm::StringRef{"stdout.txt"}, llvm::StringRef{"stderr.txt"} };
+      llvm::SmallString<64> TempFilePath;
+      int FD;
+      llvm::sys::fs::createTemporaryFile("miopen", "out", FD, TempFilePath);
+      llvm::Optional<llvm::StringRef> redirects[] = { llvm::None, TempFilePath.str(), llvm::None };
       int miopenDriverResult = llvm::sys::ExecuteAndWait(
           miopenDriverProgram, llvm::ArrayRef<llvm::StringRef>(miopenDriverArgs),
           llvm::None, redirects, 0, 0, &errorMessage);
       if (miopenDriverResult) {
         llvm::errs() << "miopenDriver execute fail: " << errorMessage;
       }
+
+      // read from stdout.
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> stdoutFile = llvm::MemoryBuffer::getFile(TempFilePath.str());
+      if (std::error_code EC = stdoutFile.getError()) {
+        llvm::errs() << "could not open file at " << TempFilePath << " : " << EC.message() << "\n";
+      }
+
+      // parse and update attributes.
+      llvm::StringRef result = stdoutFile.get()->getMemBufferRef().getBuffer();
+      while (result.size()) {
+        auto firstLineAndResult = result.split("\n");
+        auto attrAndValue = firstLineAndResult.first.split(" ");
+        std::vector<std::string> attrNameVector {"kernel_path", "kernel_name"};
+        llvm::for_each(attrNameVector, [&](std::string &attrName) {
+          if (attrAndValue.first.equals(attrName)) {
+            StringAttr attr = StringAttr::get(attrAndValue.second.ltrim('"').rtrim('"'), op->getContext());
+            op->setAttr(attrName, attr);
+          }
+        });
+        result = firstLineAndResult.second;
+      }
+
+      // remove temp file.
+      llvm::sys::fs::remove(TempFilePath);
     }
   });
 
