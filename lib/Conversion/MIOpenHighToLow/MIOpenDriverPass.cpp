@@ -90,9 +90,10 @@ LogicalResult MIOpenDriverPass::invokeMIOpenDriverPerFunction(
       }
 
       std::string errorMessage;
+      llvm::Optional<llvm::StringRef> redirects[] = { llvm::None, llvm::StringRef{"stdout.txt"}, llvm::StringRef{"stderr.txt"} };
       int miopenDriverResult = llvm::sys::ExecuteAndWait(
-          miopenDriverProgram, llvm::ArrayRef<llvm::StringRef>(miopenDriverArgs), llvm::None, {}, 0,
-          0, &errorMessage);
+          miopenDriverProgram, llvm::ArrayRef<llvm::StringRef>(miopenDriverArgs),
+          llvm::None, redirects, 0, 0, &errorMessage);
       if (miopenDriverResult) {
         llvm::errs() << "miopenDriver execute fail: " << errorMessage;
       }
