@@ -68,6 +68,7 @@ class GpuKernelToHSACOPass : public ModulePass<GpuKernelToHSACOPass> {
 public:
   GpuKernelToHSACOPass(rocm::HSACOGeneratorConfig hsacoGeneratorConfig =
                            rocm::HSACOGeneratorConfig(/*isTestMode*/ true))
+                           //rocm::HSACOGeneratorConfig(/*isTestMode*/ false))
       : config(hsacoGeneratorConfig) {}
 
   // Run the dialect converter on the module.
@@ -290,17 +291,42 @@ GpuKernelToHSACOPass::emitModuleToHSACO(llvm::Module &llvmModule,
   llvmModule.print(*irFileStream, nullptr);
   irFileStream->flush();
 
-  //// emit GCN ISA binary
-  llvm::legacy::PassManager codegenPasses;
-  llvm::SmallVector<char, 0> stream;
-  llvm::raw_svector_ostream pstream(stream);
-  std::unique_ptr<llvm::raw_fd_ostream> isabinFileStream(
-      new llvm::raw_fd_ostream(isabinPath, ec, llvm::sys::fs::F_Text));
-  llvmModule.setDataLayout(targetMachine.createDataLayout());
-  targetMachine.addPassesToEmitFile(codegenPasses, *isabinFileStream, nullptr,
-                                    llvm::TargetMachine::CGFT_ObjectFile);
-  codegenPasses.run(llvmModule);
-  isabinFileStream->flush();
+  // emit GCN ISA binary
+  std::string errorMessage;
+  if (false) {
+    llvm::legacy::PassManager codegenPasses;
+    llvm::SmallVector<char, 0> stream;
+    llvm::raw_svector_ostream pstream(stream);
+    std::unique_ptr<llvm::raw_fd_ostream> isabinFileStream(
+        new llvm::raw_fd_ostream(isabinPath, ec, llvm::sys::fs::F_Text));
+    llvmModule.setDataLayout(targetMachine.createDataLayout());
+    targetMachine.addPassesToEmitFile(codegenPasses, *isabinFileStream, nullptr,
+                                      llvm::TargetMachine::CGFT_ObjectFile);
+    codegenPasses.run(llvmModule);
+    isabinFileStream->flush();
+  } else {
+    // Launch llc as an external program.
+    llvm::StringRef llcProgram("/opt/rocm/hcc/bin/llc");
+    std::vector<llvm::StringRef> llcArgs{
+        llvm::StringRef("llc"),
+        llvm::StringRef("-mtriple=amdgcn--amdhsa-amdgiz"),
+        llvm::StringRef("-mcpu=gfx900"),
+        llvm::StringRef("-mattr=-enable-ds128"),
+        llvm::StringRef("-mattr=-code-object-v3"),
+        llvm::StringRef("irPath"), llvm::StringRef("-o"),
+        llvm::StringRef("isabinPath"),
+        llvm::StringRef("-filetype=obj")
+    };
+    llcArgs[5] = llvm::StringRef(irPath.c_str());
+    llcArgs[7] = llvm::StringRef(isabinPath.c_str());
+
+    int llcResult = llvm::sys::ExecuteAndWait(
+        llcProgram, llvm::ArrayRef<llvm::StringRef>(llcArgs), llvm::None, {}, 0,
+        0, &errorMessage);
+    if (llcResult) {
+      llvm::errs() << "llc execute fail: " << errorMessage;
+    }
+  }
 
   llvm::StringRef lldProgram(config.linkerPath);
   std::vector<llvm::StringRef> lldArgs{
@@ -312,7 +338,6 @@ GpuKernelToHSACOPass::emitModuleToHSACO(llvm::Module &llvmModule,
   lldArgs[4] = llvm::StringRef(isabinPath.c_str());
   lldArgs[6] = llvm::StringRef(hsacoPath.c_str());
 
-  std::string errorMessage;
   int lldResult = llvm::sys::ExecuteAndWait(
       lldProgram, llvm::ArrayRef<llvm::StringRef>(lldArgs), llvm::None, {}, 0,
       0, &errorMessage);
