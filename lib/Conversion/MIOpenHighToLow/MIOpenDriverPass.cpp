@@ -19,7 +19,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/GPUToROCM/MIOpenDriverPass.h"
+#include "mlir/Conversion/MIOpenHighToLow/MIOpenDriverPass.h"
 
 #include "mlir/Dialect/LLVMIR/MIOpenDialect.h"
 #include "mlir/Dialect/StandardOps/Ops.h"

@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // =============================================================================
-#ifndef MLIR_CONVERSION_GPUTOROCM_GPUTOROCMPASS_H_
-#define MLIR_CONVERSION_GPUTOROCM_GPUTOROCMPASS_H_
+#ifndef MLIR_CONVERSION_MIOPENHIGHTOLOW_MIOPENDRIVERPASS_H_
+#define MLIR_CONVERSION_MIOPENHIGHTOLOW_MIOPENDRIVERPASS_H_
 
 #include <memory>
 #include <string>
@@ -24,25 +24,12 @@ namespace mlir {
 
 namespace rocm {
 
-/// enum to represent the AMD GPU versions supported by the ROCM backend
-enum class AMDGPUVersion { GFX900 };
-
-/// enum to represent the HSA Code Object versions supported by the ROCM backend
-enum class HSACOVersion { V3 };
-
 /// Configurable parameters for geenrating the HSACO blobs from GPU Kernels
 struct MIOpenDriverConfig {
 
   /// Constructor - sets the default values for the configurable parameters
   MIOpenDriverConfig()
-      : amdgpuVersion(AMDGPUVersion::GFX900), hsacoVersion(HSACOVersion::V3),
-        miopenDriverPath("/opt/rocm/miopen/bin/MIOpenDriver") {}
-
-  /// the AMDGPU version for which to generate the HSACO
-  AMDGPUVersion amdgpuVersion;
-
-  /// the code object version for the generated HSACO
-  HSACOVersion hsacoVersion;
+      : miopenDriverPath("/opt/rocm/miopen/bin/MIOpenDriver") {}
 
   /// the path to MIOpenDriver
   std::string miopenDriverPath;
@@ -60,4 +47,4 @@ std::unique_ptr<OpPassBase<ModuleOp>> createMIOpenDriverPass(
 
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_GPUTOROCM_GPUTOROCMPASS_H_
+#endif // MLIR_CONVERSION_MIOPENHIGHTOLOW_MIOPENDRIVERPASS_H_
