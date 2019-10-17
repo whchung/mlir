@@ -65,6 +65,7 @@ endif()
 if(MLIR_ROCM_RUNNER_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS
     mlir-rocm-runner
+    mlir-miopen-runner
   )
 endif()
 

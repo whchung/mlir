@@ -118,6 +118,26 @@ mhipHostGetDevicePointerMemRef(MemRefType<float, 1> *arg, int32_t flags) {
   return result;
 }
 
+extern "C" MemRefType<float, 4>
+mhipMalloc4D(int n, int c, int h, int w) {
+
+  MemRefType<float, 4> result;
+  result.offset = 0;
+  result.sizes[0] = n;
+  result.sizes[1] = c;
+  result.sizes[2] = h;
+  result.sizes[3] = w;
+  result.strides[0] = result.strides[1] = result.strides[2] = result.strides[3] = 0;
+
+  reportErrorIfAny(hipSetDevice(0), "hipSetDevice");
+
+  reportErrorIfAny(
+      hipMalloc((void **)&result.data, n * c * h * w * sizeof(float)),
+      "hipMalloc4D");
+
+  return result;
+}
+
 // Allows to register a pointer with the HIP runtime.
 // Helpful until we have transfer functions implemented.
 extern "C" void mhipHostRegisterPointer(void *arg, int32_t flags) {
