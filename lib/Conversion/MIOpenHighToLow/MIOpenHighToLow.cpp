@@ -207,7 +207,7 @@ void LowerMIOpenHighToLowPass::runOnModule() {
                   Conv2D_OpConversion<miopen::Conv2D_BF16Op, miopen::Conv2D_BF16_KernelFunctionOp>,
                   Conv2DEx_OpConversion
                  >(&getContext(), typeConverter);
-  mlir::populateFuncOpTypeConversionPattern(patterns, &getContext(), typeConverter);
+  mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
   ConversionTarget target(getContext());
   target.addLegalDialect<LLVM::LLVMDialect>();
