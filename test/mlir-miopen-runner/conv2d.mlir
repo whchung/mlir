@@ -4,8 +4,6 @@ func @conv2d(%arg_input : memref<?x?x?x?xf32>, %arg_filter : memref<?x?x?x?xf32>
   %cst = constant 1 : index
   %cst2 = constant 128 : index
 
-  %value = constant 1.0 : f32
-
   %tensor_input = memref_cast %arg_input : memref<?x?x?x?xf32> to memref<128x128x17x17xf32>
   %tensor_filter = memref_cast %arg_filter : memref<?x?x?x?xf32> to memref<128x128x3x3xf32>
   %tensor_output = memref_cast %arg_output : memref<?x?x?x?xf32> to memref<128x128x42x42xf32>
